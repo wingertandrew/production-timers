@@ -25,22 +25,16 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
   onResetTime,
   onAdjustTimeBySeconds
 }) => {
-  const activeTimer = clockState.timers.find(t => t.id === clockState.activeTimerId);
-  
-  if (!activeTimer) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-white">No active timer</div>;
-  }
-
-  const getStatusColor = () => {
-    if (activeTimer.isPaused) return '#facc15'; // yellow-400
-    if (activeTimer.isRunning) return '#22c55e'; // green-500
-    if (activeTimer.minutes === 0 && activeTimer.seconds <= 10) return '#ef4444'; // red-500
+  const getStatusColor = (timer: any) => {
+    if (timer.isPaused) return '#facc15'; // yellow-400
+    if (timer.isRunning) return '#22c55e'; // green-500
+    if (timer.minutes === 0 && timer.seconds <= 10) return '#ef4444'; // red-500
     return '#6b7280'; // gray-500
   };
 
-  const getStatusText = () => {
-    if (activeTimer.isPaused) return 'PAUSED';
-    if (activeTimer.isRunning) return 'RUNNING';
+  const getStatusText = (timer: any) => {
+    if (timer.isPaused) return 'PAUSED';
+    if (timer.isRunning) return 'RUNNING';
     return 'STOPPED';
   };
 
@@ -51,8 +45,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
     return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
   };
 
-  const statusColor = getStatusColor();
-  const displayTime = formatTime(activeTimer.minutes, activeTimer.seconds);
+  const activeTimer = clockState.timers.find(t => t.id === clockState.activeTimerId);
 
   return (
     <div className="min-h-screen bg-black text-white p-4 overflow-hidden">
@@ -83,159 +76,150 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
           )}
         </div>
 
-        {/* Main Active Timer Display */}
-        <div className="flex-1 flex flex-col justify-center items-center mb-8">
-          <div className="text-center mb-6">
-            <div className="text-[12rem] font-mono font-bold tracking-wider text-white leading-none mb-4">
-              {displayTime}
-            </div>
+        {/* All Timers Vertical Stack */}
+        <div className="flex-1 flex flex-col justify-center gap-4 mb-8">
+          {clockState.timers.map((timer) => {
+            const progress = getProgressPercentage(timer);
+            const isActive = timer.id === clockState.activeTimerId;
+            const statusColor = getStatusColor(timer);
+            const displayTime = formatTime(timer.minutes, timer.seconds);
             
-            {/* Status Bar */}
-            <div 
-              className={`rounded-2xl p-6 mb-6 ${
-                activeTimer.isRunning && 
-                !activeTimer.isPaused && 
-                activeTimer.minutes === 0 && 
-                activeTimer.seconds <= 10 
-                  ? 'urgent-pulse' 
-                  : ''
-              }`} 
-              style={{ backgroundColor: statusColor }}
+            return (
+              <div
+                key={timer.id}
+                className={`bg-gray-900 rounded-xl p-6 border-2 transition-all ${
+                  isActive ? 'border-blue-500 bg-gray-800' : 'border-gray-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  {/* Timer ID */}
+                  <div className={`text-4xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
+                    TIMER {timer.id}
+                  </div>
+                  
+                  {/* Timer Display */}
+                  <div className="text-8xl font-mono font-bold tracking-wider text-white">
+                    {displayTime}
+                  </div>
+                  
+                  {/* Status */}
+                  <div 
+                    className={`rounded-xl p-4 ${
+                      timer.isRunning && 
+                      !timer.isPaused && 
+                      timer.minutes === 0 && 
+                      timer.seconds <= 10 
+                        ? 'urgent-pulse' 
+                        : ''
+                    }`} 
+                    style={{ backgroundColor: statusColor }}
+                  >
+                    <div className="flex items-center gap-3 text-black text-2xl font-bold">
+                      {timer.isRunning && !timer.isPaused ? (
+                        <div className="w-0 h-0 border-l-[16px] border-l-black border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent"></div>
+                      ) : timer.isPaused ? (
+                        <div className="flex gap-2">
+                          <div className="w-2 h-6 bg-black"></div>
+                          <div className="w-2 h-6 bg-black"></div>
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 bg-black"></div>
+                      )}
+                      <span>{getStatusText(timer)}</span>
+                      {timer.isPaused && (
+                        <div className="bg-black/20 rounded-full px-3 py-1 text-lg font-mono ml-2">
+                          {formatDuration(timer.currentPauseDuration)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mt-4">
+                  <Progress 
+                    value={progress} 
+                    className="h-4 bg-gray-700"
+                  />
+                  <div className="flex justify-between text-sm text-gray-400 mt-2">
+                    <span>Elapsed: {formatTime(timer.elapsedMinutes, timer.elapsedSeconds)}</span>
+                    <span>Remaining: {displayTime}</span>
+                    {timer.totalPausedTime > 0 && (
+                      <span className="text-yellow-400">
+                        Paused: {formatDuration(timer.totalPausedTime)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Control Buttons - Only for Active Timer */}
+        {activeTimer && (
+          <div className="flex justify-center gap-4 mb-4">
+            {/* Time Adjustment */}
+            <FastAdjustButton
+              onAdjust={(amount) => onAdjustTimeBySeconds(amount)}
+              adjustAmount={-1}
+              disabled={activeTimer.isRunning && !activeTimer.isPaused}
+              className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl text-2xl font-bold"
             >
-              <div className="flex items-center justify-center gap-4 text-black">
-                <div className="flex items-center gap-3 text-4xl font-bold">
-                  {activeTimer.isRunning && !activeTimer.isPaused ? (
-                    <div className="w-0 h-0 border-l-[20px] border-l-black border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent"></div>
-                  ) : activeTimer.isPaused ? (
-                    <div className="flex gap-2">
-                      <div className="w-3 h-8 bg-black"></div>
-                      <div className="w-3 h-8 bg-black"></div>
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 bg-black"></div>
-                  )}
-                  <span>{getStatusText()}</span>
+              <Minus className="w-8 h-8" />
+            </FastAdjustButton>
+
+            <FastAdjustButton
+              onAdjust={(amount) => onAdjustTimeBySeconds(amount)}
+              adjustAmount={1}
+              disabled={activeTimer.isRunning && !activeTimer.isPaused}
+              className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl text-2xl font-bold"
+            >
+              <Plus className="w-8 h-8" />
+            </FastAdjustButton>
+
+            {/* Play/Pause Button */}
+            <Button
+              onClick={onTogglePlayPause}
+              className="h-16 w-32 bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
+            >
+              {activeTimer.isRunning && !activeTimer.isPaused ? (
+                <div className="flex gap-2">
+                  <div className="w-3 h-10 bg-black"></div>
+                  <div className="w-3 h-10 bg-black"></div>
                 </div>
-                {activeTimer.isPaused && (
-                  <div className="bg-black/20 rounded-full px-4 py-2 text-lg font-mono">
-                    {formatDuration(activeTimer.currentPauseDuration)}
-                  </div>
-                )}
-              </div>
-            </div>
+              ) : (
+                <div className="w-0 h-0 border-l-[20px] border-l-black border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-2"></div>
+              )}
+            </Button>
 
-            {/* Timer ID */}
-            <div className="text-6xl font-bold text-blue-400 mb-8">
-              TIMER {activeTimer.id}
-            </div>
+            {/* Reset Button */}
+            <HoldButton
+              onHoldComplete={onResetTime}
+              className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
+            >
+              <RotateCcw className="w-8 h-8" />
+            </HoldButton>
           </div>
-        </div>
-
-        {/* All Timers Horizontal Display */}
-        <div className="mb-8">
-          <div className="grid grid-cols-5 gap-4 h-32">
-            {clockState.timers.map((timer) => {
-              const progress = getProgressPercentage(timer);
-              const isActive = timer.id === clockState.activeTimerId;
-              
-              return (
-                <div
-                  key={timer.id}
-                  className={`bg-gray-900 rounded-xl p-4 border-2 transition-all ${
-                    isActive ? 'border-blue-500 bg-gray-800' : 'border-gray-700'
-                  }`}
-                >
-                  {/* Timer ID and Time */}
-                  <div className="text-center mb-2">
-                    <div className={`text-lg font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
-                      T{timer.id}
-                    </div>
-                    <div className="text-2xl font-mono font-bold text-white">
-                      {formatTime(timer.minutes, timer.seconds)}
-                    </div>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="mb-2">
-                    <Progress 
-                      value={progress} 
-                      className="h-2 bg-gray-700"
-                    />
-                  </div>
-                  
-                  {/* Status and Elapsed */}
-                  <div className="text-center">
-                    <div className={`text-xs font-bold ${
-                      timer.isPaused ? 'text-yellow-400' : 
-                      timer.isRunning ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {timer.isPaused ? 'PAUSED' : timer.isRunning ? 'RUN' : 'STOP'}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {formatTime(timer.elapsedMinutes, timer.elapsedSeconds)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Control Buttons */}
-        <div className="flex justify-center gap-4 mb-4">
-          {/* Time Adjustment */}
-          <FastAdjustButton
-            onAdjust={(amount) => onAdjustTimeBySeconds(amount)}
-            adjustAmount={-1}
-            disabled={activeTimer.isRunning && !activeTimer.isPaused}
-            className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl text-2xl font-bold"
-          >
-            <Minus className="w-8 h-8" />
-          </FastAdjustButton>
-
-          <FastAdjustButton
-            onAdjust={(amount) => onAdjustTimeBySeconds(amount)}
-            adjustAmount={1}
-            disabled={activeTimer.isRunning && !activeTimer.isPaused}
-            className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl text-2xl font-bold"
-          >
-            <Plus className="w-8 h-8" />
-          </FastAdjustButton>
-
-          {/* Play/Pause Button */}
-          <Button
-            onClick={onTogglePlayPause}
-            className="h-16 w-32 bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
-          >
-            {activeTimer.isRunning && !activeTimer.isPaused ? (
-              <div className="flex gap-2">
-                <div className="w-3 h-10 bg-black"></div>
-                <div className="w-3 h-10 bg-black"></div>
-              </div>
-            ) : (
-              <div className="w-0 h-0 border-l-[20px] border-l-black border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-2"></div>
-            )}
-          </Button>
-
-          {/* Reset Button */}
-          <HoldButton
-            onHoldComplete={onResetTime}
-            className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
-          >
-            <RotateCcw className="w-8 h-8" />
-          </HoldButton>
-        </div>
+        )}
 
         {/* Footer Stats */}
         <div className="flex justify-between items-center text-white text-lg h-8">
           <div className="flex gap-6">
-            <div>
-              Elapsed: {formatTime(activeTimer.elapsedMinutes, activeTimer.elapsedSeconds)}
-            </div>
-            {activeTimer.totalPausedTime > 0 && (
-              <div className="text-yellow-400">
-                Total Paused: {formatDuration(activeTimer.totalPausedTime)}
-              </div>
+            {activeTimer && (
+              <>
+                <div>
+                  Active: Timer {activeTimer.id}
+                </div>
+                <div>
+                  Elapsed: {formatTime(activeTimer.elapsedMinutes, activeTimer.elapsedSeconds)}
+                </div>
+                {activeTimer.totalPausedTime > 0 && (
+                  <div className="text-yellow-400">
+                    Total Paused: {formatDuration(activeTimer.totalPausedTime)}
+                  </div>
+                )}
+              </>
             )}
           </div>
           
