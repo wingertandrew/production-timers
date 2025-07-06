@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Progress } from '@/components/ui/progress';
 
 interface SingleTimer {
   id: number;
@@ -11,6 +12,7 @@ interface SingleTimer {
   elapsedSeconds: number;
   totalPausedTime: number;
   currentPauseDuration: number;
+  initialTime?: { minutes: number; seconds: number };
 }
 
 interface ClockData {
@@ -30,7 +32,8 @@ const ClockPretty = () => {
       elapsedMinutes: 0,
       elapsedSeconds: 0,
       totalPausedTime: 0,
-      currentPauseDuration: 0
+      currentPauseDuration: 0,
+      initialTime: { minutes: 5, seconds: 0 }
     })),
     activeTimerId: 1,
     ntpOffset: 0
@@ -85,80 +88,127 @@ const ClockPretty = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const activeTimer = clockData.timers.find(t => t.id === clockData.activeTimerId);
-  if (!activeTimer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
-
-  const getStatusColor = () => {
-    if (activeTimer.isPaused) return 'text-yellow-400';
-    if (activeTimer.isRunning) return 'text-green-400';
-    return 'text-red-400';
+  const getProgressPercentage = (timer: SingleTimer) => {
+    if (!timer.initialTime) return 0;
+    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
+    const remainingSeconds = timer.minutes * 60 + timer.seconds;
+    const elapsedSeconds = totalInitialSeconds - remainingSeconds;
+    return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
   };
 
-  const getStatusText = () => {
-    if (activeTimer.isPaused) return 'PAUSED';
-    if (activeTimer.isRunning) return 'RUNNING';
+  const getStatusColor = (timer: SingleTimer) => {
+    if (timer.isPaused) return 'text-yellow-400';
+    if (timer.isRunning) return 'text-green-400';
+    if (timer.minutes === 0 && timer.seconds <= 10) return 'text-red-400';
+    return 'text-gray-400';
+  };
+
+  const getStatusText = (timer: SingleTimer) => {
+    if (timer.isPaused) return 'PAUSED';
+    if (timer.isRunning) return 'RUNNING';
     return 'STOPPED';
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
-      {/* Main Timer Display */}
-      <div className="text-center mb-8">
-        <div className="text-[20rem] font-mono font-bold tracking-wider mb-8 text-white leading-none">
-          {formatTime(activeTimer.minutes, activeTimer.seconds)}
-        </div>
-        
-        {/* Status Indicator */}
-        <div className={`text-6xl font-bold mb-6 ${getStatusColor()}`}>
-          {getStatusText()}
-          {activeTimer.isPaused && (
-            <div className="text-4xl animate-pulse mt-2">
-              {formatDuration(activeTimer.currentPauseDuration)}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Timer Information */}
-      <div className="text-center mb-8">
-        <div className="text-8xl font-bold text-blue-400 mb-4">
-          TIMER {activeTimer.id}
-        </div>
-        
-        {/* All Timers Status */}
-        <div className="flex justify-center space-x-4 mb-6">
-          {clockData.timers.map((timer) => (
-            <div
-              key={timer.id}
-              className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-bold text-lg ${
-                timer.id === clockData.activeTimerId
-                  ? 'bg-blue-500 border-blue-500 text-white'
-                  : timer.isRunning
-                  ? 'bg-green-500 border-green-500 text-white'
-                  : timer.isPaused
-                  ? 'bg-yellow-500 border-yellow-500 text-black'
-                  : 'border-gray-600 text-gray-400'
-              }`}
-            >
-              {timer.id}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-2 gap-16 text-center">
-        <div className="bg-gray-900/50 p-8 rounded-2xl border border-gray-700">
-          <div className="text-2xl text-gray-400 mb-2">TIME ELAPSED</div>
-          <div className="text-5xl font-mono font-bold text-green-400">
-            {formatTime(activeTimer.elapsedMinutes, activeTimer.elapsedSeconds)}
+    <div className="min-h-screen bg-black text-white p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-6xl font-bold text-white mb-4">TIMER OVERVIEW</h1>
+          <div className="text-2xl text-gray-400">
+            Active Timer: {clockData.activeTimerId}
           </div>
         </div>
-        
-        <div className="bg-gray-900/50 p-8 rounded-2xl border border-gray-700">
-          <div className="text-2xl text-gray-400 mb-2">TOTAL PAUSED</div>
-          <div className="text-5xl font-mono font-bold text-yellow-400">
-            {formatDuration(activeTimer.totalPausedTime)}
+
+        {/* All Timers Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+          {clockData.timers.map((timer) => {
+            const progress = getProgressPercentage(timer);
+            const isActive = timer.id === clockData.activeTimerId;
+            const statusColor = getStatusColor(timer);
+            
+            return (
+              <div
+                key={timer.id}
+                className={`bg-gray-900 rounded-2xl p-8 border-2 transition-all ${
+                  isActive ? 'border-blue-500 bg-gray-800 scale-105' : 'border-gray-700'
+                }`}
+              >
+                {/* Timer Header */}
+                <div className="text-center mb-6">
+                  <div className={`text-4xl font-bold mb-2 ${isActive ? 'text-blue-400' : 'text-white'}`}>
+                    TIMER {timer.id}
+                  </div>
+                  <div className={`text-2xl font-bold ${statusColor}`}>
+                    {getStatusText(timer)}
+                  </div>
+                </div>
+
+                {/* Main Time Display */}
+                <div className="text-center mb-6">
+                  <div className="text-8xl font-mono font-bold text-white mb-4">
+                    {formatTime(timer.minutes, timer.seconds)}
+                  </div>
+                  
+                  {/* Elapsed Time */}
+                  <div className="text-2xl font-mono text-green-400">
+                    Elapsed: {formatTime(timer.elapsedMinutes, timer.elapsedSeconds)}
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-6">
+                  <Progress 
+                    value={progress} 
+                    className="h-4 bg-gray-700"
+                  />
+                  <div className="flex justify-between text-sm text-gray-400 mt-2">
+                    <span>{progress.toFixed(1)}%</span>
+                    <span>Complete</span>
+                  </div>
+                </div>
+
+                {/* Additional Info */}
+                {(timer.isPaused || timer.totalPausedTime > 0) && (
+                  <div className="text-center space-y-2">
+                    {timer.isPaused && (
+                      <div className="text-yellow-400 text-lg animate-pulse">
+                        Current Pause: {formatDuration(timer.currentPauseDuration)}
+                      </div>
+                    )}
+                    {timer.totalPausedTime > 0 && (
+                      <div className="text-yellow-300 text-sm">
+                        Total Paused: {formatDuration(timer.totalPausedTime)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Summary Stats */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+            <div className="text-xl text-gray-400 mb-2">RUNNING TIMERS</div>
+            <div className="text-4xl font-bold text-green-400">
+              {clockData.timers.filter(t => t.isRunning && !t.isPaused).length}
+            </div>
+          </div>
+          
+          <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+            <div className="text-xl text-gray-400 mb-2">PAUSED TIMERS</div>
+            <div className="text-4xl font-bold text-yellow-400">
+              {clockData.timers.filter(t => t.isPaused).length}
+            </div>
+          </div>
+          
+          <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+            <div className="text-xl text-gray-400 mb-2">STOPPED TIMERS</div>
+            <div className="text-4xl font-bold text-gray-400">
+              {clockData.timers.filter(t => !t.isRunning && !t.isPaused).length}
+            </div>
           </div>
         </div>
       </div>

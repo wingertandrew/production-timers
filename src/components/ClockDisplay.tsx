@@ -83,6 +83,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
             const isActive = timer.id === clockState.activeTimerId;
             const statusColor = getStatusColor(timer);
             const displayTime = formatTime(timer.minutes, timer.seconds);
+            const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
             
             return (
               <div
@@ -97,14 +98,20 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                     {timer.id}
                   </div>
                   
-                  {/* Timer Display - Responsive text */}
-                  <div className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-mono font-bold tracking-wider text-white flex-1 text-center">
-                    {displayTime}
+                  {/* Timer Display with Elapsed/Remaining */}
+                  <div className="flex-1 text-center">
+                    <div className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-mono font-bold tracking-wider text-white">
+                      {displayTime}
+                    </div>
+                    <div className="flex justify-center gap-6 mt-2 text-lg md:text-xl lg:text-2xl font-mono">
+                      <span className="text-green-400">+{elapsedTime}</span>
+                      <span className="text-red-400">-{displayTime}</span>
+                    </div>
                   </div>
                   
-                  {/* Status */}
+                  {/* Status - Smaller */}
                   <div 
-                    className={`rounded-xl p-3 min-w-[200px] ${
+                    className={`rounded-lg p-2 min-w-[120px] ${
                       timer.isRunning && 
                       !timer.isPaused && 
                       timer.minutes === 0 && 
@@ -114,20 +121,20 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                     }`} 
                     style={{ backgroundColor: statusColor }}
                   >
-                    <div className="flex items-center gap-2 text-black text-lg font-bold justify-center">
+                    <div className="flex items-center gap-2 text-black text-sm font-bold justify-center">
                       {timer.isRunning && !timer.isPaused ? (
-                        <div className="w-0 h-0 border-l-[12px] border-l-black border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent"></div>
+                        <div className="w-0 h-0 border-l-[8px] border-l-black border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"></div>
                       ) : timer.isPaused ? (
                         <div className="flex gap-1">
-                          <div className="w-2 h-4 bg-black"></div>
-                          <div className="w-2 h-4 bg-black"></div>
+                          <div className="w-1.5 h-3 bg-black"></div>
+                          <div className="w-1.5 h-3 bg-black"></div>
                         </div>
                       ) : (
-                        <div className="w-4 h-4 bg-black"></div>
+                        <div className="w-3 h-3 bg-black"></div>
                       )}
                       <span>{getStatusText(timer)}</span>
                       {timer.isPaused && (
-                        <div className="bg-black/20 rounded-full px-2 py-1 text-sm font-mono ml-1">
+                        <div className="bg-black/20 rounded-full px-1.5 py-0.5 text-xs font-mono ml-1">
                           {formatDuration(timer.currentPauseDuration)}
                         </div>
                       )}
@@ -141,15 +148,11 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                     value={progress} 
                     className="h-3 bg-gray-700"
                   />
-                  <div className="flex justify-between text-sm text-gray-400 mt-2">
-                    <span>Elapsed: {formatTime(timer.elapsedMinutes, timer.elapsedSeconds)}</span>
-                    <span>Remaining: {displayTime}</span>
-                    {timer.totalPausedTime > 0 && (
-                      <span className="text-yellow-400">
-                        Paused: {formatDuration(timer.totalPausedTime)}
-                      </span>
-                    )}
-                  </div>
+                  {timer.totalPausedTime > 0 && (
+                    <div className="text-center text-yellow-400 text-sm mt-2">
+                      Total Paused: {formatDuration(timer.totalPausedTime)}
+                    </div>
+                  )}
                 </div>
               </div>
             );
