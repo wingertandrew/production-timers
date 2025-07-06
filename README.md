@@ -95,6 +95,14 @@ curl -X POST http://localhost:8080/api/timer/5/adjust-time \
   -d '{"seconds": 30}'
 ```
 
+Common increments for Companion integration:
+
+- `POST /api/timer/{id}/adjust-time` body `{ "seconds": 1 }`
+- `POST /api/timer/{id}/adjust-time` body `{ "seconds": 5 }`
+- `POST /api/timer/{id}/adjust-time` body `{ "seconds": 10 }`
+- `POST /api/timer/{id}/adjust-time` body `{ "seconds": 15 }`
+- `POST /api/timer/{id}/adjust-time` body `{ "seconds": 30 }`
+
 #### System Operations
 
 Get status of all timers:
