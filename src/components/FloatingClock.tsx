@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ClockState, NTPSyncStatus } from '@/types/clock';
-import { formatTime, getStatusColor, getStatusText } from '@/utils/clockUtils';
+import { formatTime } from '@/utils/clockUtils';
 
 interface FloatingClockProps {
   clockState: ClockState;
@@ -9,17 +9,27 @@ interface FloatingClockProps {
 }
 
 const FloatingClock: React.FC<FloatingClockProps> = ({ clockState, ntpSyncStatus }) => {
-  const statusColor = getStatusColor(
-    clockState.isRunning, 
-    clockState.isPaused, 
-    clockState.minutes, 
-    clockState.seconds, 
-    clockState.isBetweenRounds
-  );
+  const activeTimer = clockState.timers.find(t => t.id === clockState.activeTimerId);
+  
+  if (!activeTimer) {
+    return null;
+  }
 
-  const displayTime = clockState.isBetweenRounds 
-    ? formatTime(clockState.betweenRoundsMinutes, clockState.betweenRoundsSeconds)
-    : formatTime(clockState.minutes, clockState.seconds);
+  const getStatusColor = () => {
+    if (activeTimer.isPaused) return '#facc15'; // yellow-400
+    if (activeTimer.isRunning) return '#22c55e'; // green-500
+    if (activeTimer.minutes === 0 && activeTimer.seconds <= 10) return '#ef4444'; // red-500
+    return '#6b7280'; // gray-500
+  };
+
+  const getStatusText = () => {
+    if (activeTimer.isPaused) return 'PAUSED';
+    if (activeTimer.isRunning) return 'RUNNING';
+    return 'STOPPED';
+  };
+
+  const statusColor = getStatusColor();
+  const displayTime = formatTime(activeTimer.minutes, activeTimer.seconds);
 
   return (
     <div className="sticky top-0 z-40 w-full">
@@ -39,21 +49,18 @@ const FloatingClock: React.FC<FloatingClockProps> = ({ clockState, ntpSyncStatus
               className="rounded px-3 py-1 text-xs font-bold text-black"
               style={{ backgroundColor: statusColor }}
             >
-              {clockState.isBetweenRounds ? 'BETWEEN ROUNDS' : getStatusText(clockState.isRunning, clockState.isPaused, clockState.isBetweenRounds)}
+              {getStatusText()}
             </div>
           </div>
 
-          {/* Round Info and Details */}
+          {/* Timer Info and Details */}
           <div className="flex items-center space-x-4 text-sm">
             <div className="text-white font-bold">
-              ROUND {clockState.currentRound} of {clockState.totalRounds}
+              TIMER {activeTimer.id}
             </div>
             
             <div className="text-gray-300 text-xs">
-              {clockState.isBetweenRounds 
-                ? `Between: ${displayTime}` 
-                : `Elapsed: ${formatTime(clockState.elapsedMinutes, clockState.elapsedSeconds)}`
-              }
+              Elapsed: {formatTime(activeTimer.elapsedMinutes, activeTimer.elapsedSeconds)}
             </div>
 
             {/* NTP Status */}

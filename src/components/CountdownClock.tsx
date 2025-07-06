@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Info, Server, Bug } from 'lucide-react';
@@ -365,28 +364,7 @@ const CountdownClock = () => {
         {/* Show FloatingClock bar on non-clock tabs */}
         {activeTab !== 'clock' && activeTimer && (
           <FloatingClock 
-            clockState={{
-              minutes: activeTimer.minutes,
-              seconds: activeTimer.seconds,
-              currentRound: 1,
-              totalRounds: 1,
-              isRunning: activeTimer.isRunning,
-              isPaused: activeTimer.isPaused,
-              elapsedMinutes: activeTimer.elapsedMinutes,
-              elapsedSeconds: activeTimer.elapsedSeconds,
-              pauseStartTime: activeTimer.pauseStartTime,
-              totalPausedTime: activeTimer.totalPausedTime,
-              currentPauseDuration: activeTimer.currentPauseDuration,
-              isBetweenRounds: false,
-              betweenRoundsMinutes: 0,
-              betweenRoundsSeconds: 0,
-              betweenRoundsEnabled: false,
-              betweenRoundsTime: 0,
-              ntpSyncEnabled: clockState.ntpSyncEnabled,
-              ntpSyncInterval: clockState.ntpSyncInterval,
-              ntpDriftThreshold: clockState.ntpDriftThreshold,
-              ntpOffset: clockState.ntpOffset
-            }}
+            clockState={clockState}
             ntpSyncStatus={ntpSyncStatus}
           />
         )}
