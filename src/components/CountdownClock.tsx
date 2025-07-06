@@ -278,7 +278,7 @@ const CountdownClock = () => {
     }
   };
 
-  const setTime = async (timerId: number, minutes: number, seconds: number) => {
+  const setTimerTime = async (timerId: number, minutes: number, seconds: number) => {
     const validMinutes = Math.max(0, Math.min(59, minutes));
     const validSeconds = Math.max(0, Math.min(59, seconds));
     
@@ -297,17 +297,12 @@ const CountdownClock = () => {
     }
   };
 
-  const applySettings = async () => {
-    addDebugLog('UI', 'Settings applied', { 
-      time: { minutes: inputMinutes, seconds: inputSeconds },
+  const applyNtpSettings = async () => {
+    addDebugLog('UI', 'NTP settings applied', { 
       ntpSyncEnabled,
       ntpSyncInterval,
       ntpDriftThreshold
     });
-    
-    if (clockState.activeTimerId) {
-      await setTime(clockState.activeTimerId, inputMinutes, inputSeconds);
-    }
     
     try {
       await fetch('/api/set-ntp-sync', {
@@ -320,11 +315,10 @@ const CountdownClock = () => {
         })
       });
     } catch (error) {
-      addDebugLog('UI', 'Failed to sync settings with server', { error: error.message });
+      addDebugLog('UI', 'Failed to sync NTP settings with server', { error: error.message });
     }
     
-    setActiveTab('clock');
-    toast({ title: "Settings Applied" });
+    toast({ title: "NTP Settings Applied" });
   };
 
   const handleCommandCopy = (command: string) => {
@@ -355,7 +349,7 @@ const CountdownClock = () => {
         </TabsList>
 
         {/* Show FloatingClock bar on non-clock tabs */}
-        {activeTab !== 'clock' && activeTimer && (
+        {activeTab !== 'clock' && (
           <FloatingClock 
             clockState={clockState}
             ntpSyncStatus={ntpSyncStatus}
@@ -392,23 +386,15 @@ const CountdownClock = () => {
 
         <TabsContent value="settings">
           <SettingsTab
-            inputMinutes={inputMinutes}
-            inputSeconds={inputSeconds}
-            inputRounds={1}
-            betweenRoundsEnabled={false}
-            betweenRoundsTime={0}
+            clockState={clockState}
             ntpSyncEnabled={ntpSyncEnabled}
             ntpSyncInterval={ntpSyncInterval}
             ntpDriftThreshold={ntpDriftThreshold}
-            setInputMinutes={setInputMinutes}
-            setInputSeconds={setInputSeconds}
-            setInputRounds={() => {}}
-            setBetweenRoundsEnabled={() => {}}
-            setBetweenRoundsTime={() => {}}
             setNtpSyncEnabled={setNtpSyncEnabled}
             setNtpSyncInterval={setNtpSyncInterval}
             setNtpDriftThreshold={setNtpDriftThreshold}
-            onApplySettings={applySettings}
+            onSetTimerTime={setTimerTime}
+            onApplyNtpSettings={applyNtpSettings}
           />
         </TabsContent>
 

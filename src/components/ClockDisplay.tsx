@@ -92,9 +92,9 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  {/* Timer ID */}
-                  <div className={`text-4xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
-                    TIMER {timer.id}
+                  {/* Timer ID - Smaller single number */}
+                  <div className={`text-6xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
+                    {timer.id}
                   </div>
                   
                   {/* Timer Display */}
