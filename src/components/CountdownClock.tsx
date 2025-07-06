@@ -7,6 +7,7 @@ import { useDebugLog } from '@/hooks/useDebugLog';
 import { NTPSyncManager, DEFAULT_NTP_CONFIG } from '@/utils/ntpSync';
 
 import TimerCard from './TimerCard';
+import ClockDisplay from './ClockDisplay';
 import SettingsTab from './SettingsTab';
 import InfoTab from './InfoTab';
 import ApiInfoTab from './ApiInfoTab';
@@ -32,7 +33,7 @@ const CountdownClock = () => {
     timers: Array.from({ length: 5 }, (_, i) => createInitialTimer(i + 1)),
     activeTimerId: 1,
     ntpSyncEnabled: false,
-    ntpSyncInterval: 21600000, // 6 hours default
+    ntpSyncInterval: 21600000,
     ntpDriftThreshold: 50,
     ntpOffset: 0
   });
@@ -60,12 +61,10 @@ const CountdownClock = () => {
   
   const { addDebugLog, ...debugLogProps } = useDebugLog();
 
-  // Get local IP address for display
   useEffect(() => {
     setIpAddress(window.location.hostname || 'localhost');
   }, []);
 
-  // WebSocket for server communication
   useEffect(() => {
     const connectWebSocket = () => {
       try {
@@ -100,7 +99,6 @@ const CountdownClock = () => {
                 ...data
               }));
 
-              // Log NTP timestamp if present
               if (data.ntpTimestamp) {
                 addDebugLog('NTP', 'Timestamp received via WebSocket', {
                   ntpTimestamp: data.ntpTimestamp,
@@ -153,7 +151,6 @@ const CountdownClock = () => {
     connectWebSocket();
   }, []);
 
-  // NTP Sync Management
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (ntpSyncEnabled) {
@@ -308,7 +305,6 @@ const CountdownClock = () => {
       ntpDriftThreshold
     });
     
-    // Apply time to active timer
     if (clockState.activeTimerId) {
       await setTime(clockState.activeTimerId, inputMinutes, inputSeconds);
     }
@@ -342,14 +338,11 @@ const CountdownClock = () => {
     <div className="min-h-screen bg-black text-white">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
         <TabsList className="grid w-full grid-cols-5 mb-0 bg-gray-800 border-gray-700">
-          <TabsTrigger value="clock" className="text-lg py-3 data-[state=active]:bg-gray-600">Timers</TabsTrigger>
+          <TabsTrigger value="clock" className="text-lg py-3 data-[state=active]:bg-gray-600">Display</TabsTrigger>
+          <TabsTrigger value="timers" className="text-lg py-3 data-[state=active]:bg-gray-600">Timers</TabsTrigger>
           <TabsTrigger value="settings" className="text-lg py-3 data-[state=active]:bg-gray-600">
             <Settings className="w-5 h-5 mr-2" />
             Settings
-          </TabsTrigger>
-          <TabsTrigger value="info" className="text-lg py-3 data-[state=active]:bg-gray-600">
-            <Info className="w-5 h-5 mr-2" />
-            Info
           </TabsTrigger>
           <TabsTrigger value="api" className="text-lg py-3 data-[state=active]:bg-gray-600">
             <Server className="w-5 h-5 mr-2" />
@@ -369,7 +362,18 @@ const CountdownClock = () => {
           />
         )}
 
-        <TabsContent value="clock" className="p-6">
+        <TabsContent value="clock" className="p-0 m-0 h-screen">
+          <ClockDisplay
+            clockState={clockState}
+            ipAddress={ipAddress}
+            ntpSyncStatus={ntpSyncStatus}
+            onTogglePlayPause={() => pauseTimer(clockState.activeTimerId || 1)}
+            onResetTime={() => resetTimer(clockState.activeTimerId || 1)}
+            onAdjustTimeBySeconds={(seconds) => adjustTimeBySeconds(clockState.activeTimerId || 1, seconds)}
+          />
+        </TabsContent>
+
+        <TabsContent value="timers" className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {clockState.timers.map((timer) => (
               <TimerCard
@@ -384,15 +388,6 @@ const CountdownClock = () => {
               />
             ))}
           </div>
-          
-          {activeTimer && (
-            <div className="mt-8 text-center">
-              <h2 className="text-2xl font-bold mb-4">Active Timer: {activeTimer.id}</h2>
-              <div className="text-6xl font-mono font-bold text-white mb-4">
-                {`${activeTimer.minutes.toString().padStart(2, '0')}:${activeTimer.seconds.toString().padStart(2, '0')}`}
-              </div>
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="settings">
@@ -407,18 +402,14 @@ const CountdownClock = () => {
             ntpDriftThreshold={ntpDriftThreshold}
             setInputMinutes={setInputMinutes}
             setInputSeconds={setInputSeconds}
-            setInputRounds={() => {}} // No-op since we don't use rounds
-            setBetweenRoundsEnabled={() => {}} // No-op
-            setBetweenRoundsTime={() => {}} // No-op
+            setInputRounds={() => {}}
+            setBetweenRoundsEnabled={() => {}}
+            setBetweenRoundsTime={() => {}}
             setNtpSyncEnabled={setNtpSyncEnabled}
             setNtpSyncInterval={setNtpSyncInterval}
             setNtpDriftThreshold={setNtpDriftThreshold}
             onApplySettings={applySettings}
           />
-        </TabsContent>
-
-        <TabsContent value="info">
-          <InfoTab />
         </TabsContent>
 
         <TabsContent value="api">

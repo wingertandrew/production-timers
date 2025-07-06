@@ -1,206 +1,133 @@
 
-# Round Ready Countdown Clock
+# Multi-Timer Application
 
-A touch-friendly countdown clock application. Originally built for Raspberry Pi, it also runs well on macOS for local development and testing. The app includes external API control support for Stream Deck and other devices.
+A modern web-based countdown timer application featuring 5 discrete timers with API control and real-time synchronization.
 
 ## Features
 
-- **Large, Touch-Friendly Interface** – Optimized for touchscreen displays
-- **Multi‑Round Timer** – Configure 1‑15 rounds with an optional between‑rounds clock
-- **Server‑Side Clock** – Countdown continues even if your browser is closed
-- **External Control API** – HTTP endpoints for start, pause, reset and more
-- **WebSocket Updates** – All connected clients stay perfectly in sync
-- **Display Pages** – Read‑only layouts at `/clockpretty` and `/clockarena`
-- **Debug Logging** – Built‑in log viewer with CSV export
-- **Network Time Sync** – Sync with an NTP server for accurate timing
-- **Responsive Design & Toasts** – Works on any screen with clear feedback
+### Timer System
+- **5 Discrete Timers**: Independent countdown timers (Timer 1-5)
+- **Active Timer Display**: Large format display optimized for 1920x1080 screens
+- **Progress Visualization**: Progress bars showing elapsed and remaining time
+- **Real-time Updates**: WebSocket-powered live updates across all connected clients
 
-## Installation & Setup
+### Timer Controls
+- **Start/Pause/Resume**: Individual control for each timer
+- **Reset**: Reset individual timers to their initial time
+- **Time Adjustment**: Add/subtract seconds from timers (when stopped or paused)
+- **Active Timer Selection**: Switch between timers for main display
 
-### Prerequisites
-- Node.js 16+ and npm
-- macOS or Raspberry Pi with Raspbian OS
-- Touch screen display (recommended on Raspberry Pi)
+### Display Modes
+- **Main Display**: Large horizontal layout with progress bars
+- **Timer Cards**: Grid view of all timers with individual controls
+- **Floating Clock**: Compact timer bar for non-display tabs
 
-### Quick Start
-```bash
-# Clone and setup
-git clone <repository-url>
-cd countdown-clock-app
-npm install
-npm run dev
-```
+### API Control
+Complete REST API for external timer control:
 
-The application will be available at `http://localhost:8080`
+#### Timer Operations
+- `POST /api/timer/{id}/start` - Start a specific timer
+- `POST /api/timer/{id}/pause` - Pause/resume a specific timer  
+- `POST /api/timer/{id}/reset` - Reset a specific timer
+- `POST /api/timer/{id}/set-time` - Set timer duration (minutes, seconds)
+- `POST /api/timer/{id}/adjust-time` - Adjust timer by seconds
 
-### Development on macOS
-1. Install Node.js via [Homebrew](https://brew.sh/) with `brew install node` or download it from the official website.
-2. The "UFC Sans" typeface is loaded automatically. You can also install it system wide if desired.
-3. Run the steps in **Quick Start** above. The Vite dev server works the same on macOS.
+#### System Operations
+- `GET /api/status` - Get current state of all timers
+- `POST /api/set-ntp-sync` - Configure NTP synchronization
+
+### Time Synchronization
+- **NTP Sync**: Optional network time synchronization
+- **Drift Correction**: Automatic time drift detection and correction
+- **Sync Status**: Real-time NTP health monitoring
+
+### Technical Features
+- **WebSocket Communication**: Real-time updates between server and clients
+- **Responsive Design**: Optimized for 1920x1080 displays
+- **Debug Logging**: Comprehensive logging for troubleshooting
+- **Client Management**: Track connected clients
 
 ## Usage
 
-### Touch Interface
-1. **Clock Tab**: Main countdown display with large timer and controls
-2. **Settings Tab**: Configure timer, rounds and between-rounds options
-3. **API Info Tab**: Copy-ready HTTP commands and docs
-4. **Debug Tab**: Inspect log entries and export CSV
+### Web Interface
+1. **Display Tab**: Main timer display with large text and progress bars
+2. **Timers Tab**: Individual timer cards with controls
+3. **Settings Tab**: Configure timer duration and NTP settings
+4. **API Info Tab**: API endpoint documentation and examples
+5. **Debug Tab**: System logs and connection status
 
-### Additional Displays
-- `GET /clockpretty` – Large dark mode display for broadcasting
-- `GET /clockarena` – Compact arena-style overlay
+### API Examples
 
-### Controls
-- **Start**: Begin countdown
-- **Pause/Resume**: Pause or resume timer
-- **Reset Time**: Reset only the timer
-- **Reset Rounds**: Reset timer and round counter
-- **Next Round**: Skip to next round
-- **Previous Round**: Go back one round
-
-## HTTP API Reference
-
-Base URL: `http://<device-ip>:8080/api` (use `localhost` when developing on macOS)
-
-### Timer Controls
+Start Timer 1:
 ```bash
-# Start timer
-curl -X POST http://localhost:8080/api/start
-
-# Pause/Resume timer
-curl -X POST http://localhost:8080/api/pause
-
-# Reset timer
-curl -X POST http://localhost:8080/api/reset
-
-# Reset only the timer
-curl -X POST http://localhost:8080/api/reset-time
-
-# Reset timer and round count
-curl -X POST http://localhost:8080/api/reset-rounds
-
-# Next round
-curl -X POST http://localhost:8080/api/next-round
-
-# Previous round
-curl -X POST http://localhost:8080/api/previous-round
+curl -X POST http://localhost:8080/api/timer/1/start
 ```
 
-All of the above control endpoints immediately broadcast the updated timer
-`status` to any connected WebSocket clients so displays stay in sync.
-
-### Configuration
+Set Timer 2 to 10 minutes:
 ```bash
-# Set timer duration
-curl -X POST http://localhost:8080/api/set-time \
+curl -X POST http://localhost:8080/api/timer/2/set-time \
   -H "Content-Type: application/json" \
-  -d '{"minutes": 5, "seconds": 30}'
-
-# Set number of rounds
-curl -X POST http://localhost:8080/api/set-rounds \
-  -H "Content-Type: application/json" \
-  -d '{"rounds": 10}'
-
-# Set between-rounds timer
-curl -X POST http://localhost:8080/api/set-between-rounds \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": true, "time": 60}'
+  -d '{"minutes": 10, "seconds": 0}'
 ```
 
-### Status
+Get system status:
 ```bash
-# Get current status
 curl http://localhost:8080/api/status
 ```
 
-### NTP Sync
+## Installation
+
+1. Install dependencies:
 ```bash
-# Sync time using the default server (time.google.com)
-curl http://localhost:8080/api/ntp-sync
+npm install
 ```
 
-If the UDP request to the NTP server fails (for example when port 123 is
-blocked), the server automatically falls back to
-`https://worldtimeapi.org/api/ip` to retrieve the current time via HTTPS.
-
-### API Docs
+2. Start the development server:
 ```bash
-# Open interactive documentation
-curl http://localhost:8080/api/docs
-
-## Stream Deck Integration
-
-Bitfocus Companion is free control software for the Elgato Stream Deck. Use it to trigger the HTTP API from your Stream Deck or any network-connected device.
-
-### Using Companion
-
-1. Install [Bitfocus Companion](https://bitfocus.io/companion) and open the web interface.
-2. In the **Connections** tab add the **HTTP Request** module.
-3. Create a button and add an **HTTP Request** action.
-4. Enter a URL like `http://localhost:8080/api/start` (replace `start` with the desired command).
-5. Set the method to `POST` for controls or `GET` for `/api/status`.
-6. Use `localhost` when developing or the clock's IP address on your network.
-7. Keep the port `8080` unless you changed it in `server.js`.
-8. Test each button in Companion's emulator before deploying.
-
-For best results, create separate buttons for `start`, `pause`, `reset-rounds`, `next-round` and `previous-round`. Companion sends the HTTP calls directly to the application, and connected clients stay in sync through WebSocket.
-
-You can also add an HTTP Feedback in Companion to poll `http://localhost:8080/api/status` every second and show the current `minutes`, `seconds`, or `round` fields directly on your Stream Deck keys. Combine feedback variables with button styles to change text or colors as the timer updates.
-
-
-### Example Stream Deck Layout
-- Button 1: Start Timer (POST /api/start)
-- Button 2: Pause Timer (POST /api/pause)
-- Button 3: Reset Rounds (POST /api/reset-rounds)
-- Button 4: Next Round (POST /api/next-round)
-- Button 5: Previous Round (POST /api/previous-round)
-
-## Technical Implementation
-
-### Backend API Server (Required for Production)
-The repository now includes a small Express based server in `server.js` that
-handles the HTTP API and WebSocket communication. After building the client
-with `npm run build`, start the server with:
-
-```bash
-npm start
+npm run dev
 ```
 
-The server serves the contents of the `dist` directory and keeps all connected
-WebSocket clients in sync. API endpoints such as `/api/start`, `/api/pause` and
-others broadcast commands to every client and the clients report their status
-back to the server so other pages remain updated.
+3. Start the WebSocket server:
+```bash
+node server.js
+```
 
-### WebSocket Integration
-The application supports real-time communication via WebSocket:
-- Server sends commands to connected clients
-- Clients broadcast status updates
-- Enables synchronization across multiple displays
+## Architecture
 
-## Customization
+- **Frontend**: React + TypeScript + Tailwind CSS
+- **Backend**: Node.js + Express + WebSocket
+- **State Management**: React hooks with WebSocket synchronization
+- **UI Components**: Shadcn/ui component library
 
-### Display Settings
-- Modify timer font size in `CountdownClock.tsx`
-- Adjust color schemes in the component styles
-- Configure touch target sizes for different screen sizes
+## Timer States
 
-### API Extensions
-- Add authentication for security
-- Implement preset timer configurations
-- Add logging and analytics
+Each timer maintains:
+- Current time (minutes:seconds)
+- Running/paused/stopped status
+- Elapsed time tracking
+- Total pause duration
+- Initial time configuration
 
-## Troubleshooting
+## API Response Format
 
-### Common Issues
-1. **API not responding**: Ensure backend server is running
-2. **Touch not working**: Check display calibration
-3. **WebSocket errors**: Verify network connectivity
-
-### Performance Optimization
-- Use hardware acceleration on Raspberry Pi
-- Optimize React rendering for smoother animations
-- Configure appropriate display resolution
-
-## License
-
-MIT License - see LICENSE file for details
+```json
+{
+  "timers": [
+    {
+      "id": 1,
+      "minutes": 5,
+      "seconds": 30,
+      "isRunning": true,
+      "isPaused": false,
+      "elapsedMinutes": 2,
+      "elapsedSeconds": 15,
+      "totalPausedTime": 30,
+      "currentPauseDuration": 0,
+      "initialTime": { "minutes": 8, "seconds": 0 }
+    }
+  ],
+  "activeTimerId": 1,
+  "ntpSyncEnabled": false,
+  "ntpOffset": 0
+}
+```
