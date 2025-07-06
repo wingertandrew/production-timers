@@ -172,6 +172,32 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                     <p className="text-blue-300 font-bold">Each of the 5 timers (1-5) has identical API endpoints</p>
                     <p className="text-gray-300 text-sm">Simply replace the timer ID in the URL: /api/timer/{1|2|3|4|5}/action</p>
                   </div>
+
+                  <div className="mt-6 p-4 bg-gray-800 rounded-lg">
+                    <h4 className="text-xl font-bold text-white mb-3">Add Time Increments</h4>
+                    <ul className="list-disc list-inside space-y-2 text-gray-300">
+                      <li>
+                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
+                        <span className="ml-2">seconds: 1</span>
+                      </li>
+                      <li>
+                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
+                        <span className="ml-2">seconds: 5</span>
+                      </li>
+                      <li>
+                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
+                        <span className="ml-2">seconds: 10</span>
+                      </li>
+                      <li>
+                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
+                        <span className="ml-2">seconds: 15</span>
+                      </li>
+                      <li>
+                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
+                        <span className="ml-2">seconds: 30</span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
