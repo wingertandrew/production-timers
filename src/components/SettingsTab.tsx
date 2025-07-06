@@ -30,6 +30,11 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   onSetTimerTime,
   onApplyNtpSettings
 }) => {
+  const handleTimerTimeChange = (timerId: number, minutes: number, seconds: number) => {
+    // Auto-save when time is changed
+    onSetTimerTime(timerId, minutes, seconds);
+  };
+
   return (
     <div className="space-y-6 p-4 min-h-screen bg-gray-900">
       <Card className="bg-gray-800 border-gray-600">
@@ -43,7 +48,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             <CardHeader>
               <CardTitle className="text-2xl text-white flex items-center gap-3">
                 <Timer className="w-8 h-8" />
-                Individual Timer Configuration
+                Individual Timer Configuration (Auto-Save)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -65,19 +70,19 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                             min="0"
                             max="59"
                             value={timer.initialTime.minutes}
-                            onChange={(e) => onSetTimerTime(timer.id, parseInt(e.target.value) || 0, timer.initialTime.seconds)}
+                            onChange={(e) => handleTimerTimeChange(timer.id, parseInt(e.target.value) || 0, timer.initialTime.seconds)}
                             className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl w-20"
                           />
                           <div className="flex gap-2 mt-2">
                             <Button
-                              onClick={() => onSetTimerTime(timer.id, Math.max(0, timer.initialTime.minutes - 1), timer.initialTime.seconds)}
+                              onClick={() => handleTimerTimeChange(timer.id, Math.max(0, timer.initialTime.minutes - 1), timer.initialTime.seconds)}
                               size="sm"
                               className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
                             >
                               <Minus className="w-4 h-4" />
                             </Button>
                             <Button
-                              onClick={() => onSetTimerTime(timer.id, Math.min(59, timer.initialTime.minutes + 1), timer.initialTime.seconds)}
+                              onClick={() => handleTimerTimeChange(timer.id, Math.min(59, timer.initialTime.minutes + 1), timer.initialTime.seconds)}
                               size="sm"
                               className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
                             >
@@ -94,19 +99,19 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                             min="0"
                             max="59"
                             value={timer.initialTime.seconds}
-                            onChange={(e) => onSetTimerTime(timer.id, timer.initialTime.minutes, parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleTimerTimeChange(timer.id, timer.initialTime.minutes, parseInt(e.target.value) || 0)}
                             className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl w-20"
                           />
                           <div className="flex gap-2 mt-2">
                             <Button
-                              onClick={() => onSetTimerTime(timer.id, timer.initialTime.minutes, Math.max(0, timer.initialTime.seconds - 1))}
+                              onClick={() => handleTimerTimeChange(timer.id, timer.initialTime.minutes, Math.max(0, timer.initialTime.seconds - 1))}
                               size="sm"
                               className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
                             >
                               <Minus className="w-4 h-4" />
                             </Button>
                             <Button
-                              onClick={() => onSetTimerTime(timer.id, timer.initialTime.minutes, Math.min(59, timer.initialTime.seconds + 1))}
+                              onClick={() => handleTimerTimeChange(timer.id, timer.initialTime.minutes, Math.min(59, timer.initialTime.seconds + 1))}
                               size="sm"
                               className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
                             >
