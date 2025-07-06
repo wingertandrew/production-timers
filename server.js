@@ -1,3 +1,4 @@
+
 import express from 'express';
 import http from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
@@ -14,12 +15,11 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Server-side clock state
-let serverClockState = {
+// Server-side timer state
+const createInitialTimer = (id) => ({
+  id,
   minutes: 5,
   seconds: 0,
-  currentRound: 1,
-  totalRounds: 3,
   isRunning: false,
   isPaused: false,
   elapsedMinutes: 0,
@@ -27,14 +27,14 @@ let serverClockState = {
   pauseStartTime: null,
   totalPausedTime: 0,
   currentPauseDuration: 0,
-  isBetweenRounds: false,
-  betweenRoundsMinutes: 0,
-  betweenRoundsSeconds: 0,
   initialTime: { minutes: 5, seconds: 0 },
   startTime: { minutes: 5, seconds: 0 },
-  betweenRoundsEnabled: true,
-  betweenRoundsTime: 60,
-  lastUpdateTime: Date.now(),
+  lastUpdateTime: Date.now()
+});
+
+let serverClockState = {
+  timers: Array.from({ length: 5 }, (_, i) => createInitialTimer(i + 1)),
+  activeTimerId: 1,
   ntpTimestamp: null,
   ntpSyncEnabled: false,
   ntpOffset: 0,
@@ -42,7 +42,7 @@ let serverClockState = {
   ntpDriftThreshold: Number(process.env.NTP_DRIFT_THRESHOLD) || 50
 };
 
-let serverTimer = null;
+let serverTimers = {};
 let ntpSyncTimer = null;
 
 // Track connected WebSocket clients
@@ -62,12 +62,11 @@ function broadcastClients() {
     id: c.id,
     ip: c.ip,
     url: c.url,
-    hostname: c.hostname, // kept from `37rtxh-codex/set-default-ntp-sync-to-30-minutes`
+    hostname: c.hostname,
     connectedAt: c.connectedAt
   }));
   broadcast({ type: 'clients', clients });
 }
-
 
 function queryNtpTime(server) {
   return new Promise((resolve, reject) => {
@@ -158,7 +157,6 @@ async function performNtpSync() {
     const clientTime = before + networkDelay;
     const offset = serverTime - clientTime;
     serverClockState.ntpOffset = offset;
-    serverClockState.lastUpdateTime = Date.now() + offset;
     broadcast({ type: 'status', ...serverClockState });
   } catch (err) {
     console.error('Scheduled time sync failed:', err);
@@ -181,15 +179,18 @@ function stopNtpSync() {
   }
 }
 
-function startServerTimer() {
-  if (serverTimer) {
-    clearInterval(serverTimer);
+function startServerTimer(timerId) {
+  if (serverTimers[timerId]) {
+    clearInterval(serverTimers[timerId]);
   }
   
-  console.log('Starting server timer');
-  serverTimer = setInterval(() => {
-    if (serverClockState.isRunning && !serverClockState.isPaused) {
-      updateServerClock();
+  console.log(`Starting server timer ${timerId}`);
+  serverTimers[timerId] = setInterval(() => {
+    const timer = serverClockState.timers.find(t => t.id === timerId);
+    if (!timer) return;
+    
+    if (timer.isRunning && !timer.isPaused) {
+      updateServerTimer(timerId);
       broadcast({
         type: 'status',
         ...serverClockState
@@ -197,12 +198,11 @@ function startServerTimer() {
     }
     
     // Update pause duration if paused
-    if (serverClockState.isPaused && serverClockState.pauseStartTime) {
+    if (timer.isPaused && timer.pauseStartTime) {
       const pauseDuration = Math.floor(
-        (Date.now() + serverClockState.ntpOffset - serverClockState.pauseStartTime) /
-          1000
+        (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
       );
-      serverClockState.currentPauseDuration = pauseDuration;
+      timer.currentPauseDuration = pauseDuration;
       broadcast({
         type: 'status',
         ...serverClockState
@@ -211,60 +211,31 @@ function startServerTimer() {
   }, 1000);
 }
 
-function updateServerClock() {
+function stopServerTimer(timerId) {
+  if (serverTimers[timerId]) {
+    clearInterval(serverTimers[timerId]);
+    delete serverTimers[timerId];
+    console.log(`Stopped server timer ${timerId}`);
+  }
+}
+
+function updateServerTimer(timerId) {
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+  if (!timer) return;
+  
   const now = Date.now() + serverClockState.ntpOffset;
-  const elapsed = now - serverClockState.lastUpdateTime;
+  const elapsed = now - timer.lastUpdateTime;
   if (elapsed < 1000) return;
+  
   const ticks = Math.floor(elapsed / 1000);
-  serverClockState.lastUpdateTime += ticks * 1000;
+  timer.lastUpdateTime += ticks * 1000;
 
   for (let i = 0; i < ticks; i++) {
-    if (serverClockState.isBetweenRounds) {
-    // Count up during between rounds
-    const newSeconds = serverClockState.betweenRoundsSeconds + 1;
-    const newMinutes = newSeconds >= 60 ? serverClockState.betweenRoundsMinutes + 1 : serverClockState.betweenRoundsMinutes;
-    const adjustedSeconds = newSeconds >= 60 ? 0 : newSeconds;
-
-    const totalBetweenRoundsTime = serverClockState.betweenRoundsTime;
-    const currentBetweenRoundsTime = newMinutes * 60 + adjustedSeconds;
-
-    if (currentBetweenRoundsTime >= totalBetweenRoundsTime) {
-      // Between rounds complete, advance to next round
-      if (serverClockState.currentRound < serverClockState.totalRounds) {
-        serverClockState.currentRound += 1;
-        serverClockState.minutes = serverClockState.initialTime.minutes;
-        serverClockState.seconds = serverClockState.initialTime.seconds;
-        serverClockState.startTime = { ...serverClockState.initialTime };
-        serverClockState.isBetweenRounds = false;
-        serverClockState.betweenRoundsMinutes = 0;
-        serverClockState.betweenRoundsSeconds = 0;
-        serverClockState.elapsedMinutes = 0;
-        serverClockState.elapsedSeconds = 0;
-        serverClockState.isRunning = false;
-        serverClockState.isPaused = false;
-        serverClockState.totalPausedTime = 0;
-        serverClockState.currentPauseDuration = 0;
-        serverClockState.pauseStartTime = null;
-        console.log('Between rounds complete, advanced to round', serverClockState.currentRound);
-      } else {
-        // All rounds complete
-        serverClockState.isRunning = false;
-        serverClockState.isBetweenRounds = false;
-        console.log('All rounds complete');
-      }
-    } else {
-      serverClockState.betweenRoundsMinutes = newMinutes;
-      serverClockState.betweenRoundsSeconds = adjustedSeconds;
-      serverClockState.minutes = newMinutes;
-      serverClockState.seconds = adjustedSeconds;
-    }
-  } else {
-    // Regular countdown logic
-    const newSeconds = serverClockState.seconds - 1;
-    const newMinutes = newSeconds < 0 ? serverClockState.minutes - 1 : serverClockState.minutes;
+    const newSeconds = timer.seconds - 1;
+    const newMinutes = newSeconds < 0 ? timer.minutes - 1 : timer.minutes;
     const adjustedSeconds = newSeconds < 0 ? 59 : newSeconds;
 
-    const totalElapsed = (serverClockState.startTime.minutes * 60 + serverClockState.startTime.seconds) -
+    const totalElapsed = (timer.startTime.minutes * 60 + timer.startTime.seconds) -
       (newMinutes * 60 + adjustedSeconds);
     const elapsedMinutes = Math.floor(totalElapsed / 60);
     const elapsedSeconds = totalElapsed % 60;
@@ -272,44 +243,21 @@ function updateServerClock() {
     const countdownFinished = newMinutes < 0 || (newMinutes === 0 && adjustedSeconds === 0);
 
     if (countdownFinished) {
-      if (serverClockState.currentRound < serverClockState.totalRounds) {
-        if (serverClockState.betweenRoundsEnabled) {
-          // Start between rounds timer
-          serverClockState.minutes = 0;
-          serverClockState.seconds = 0;
-          serverClockState.isBetweenRounds = true;
-          serverClockState.betweenRoundsMinutes = 0;
-          serverClockState.betweenRoundsSeconds = 0;
-          serverClockState.elapsedMinutes = elapsedMinutes;
-          serverClockState.elapsedSeconds = elapsedSeconds;
-          console.log('Starting between rounds timer');
-        } else {
-          // Auto-advance to next round
-          serverClockState.currentRound += 1;
-          serverClockState.minutes = serverClockState.initialTime.minutes;
-          serverClockState.seconds = serverClockState.initialTime.seconds;
-          serverClockState.startTime = { ...serverClockState.initialTime };
-          serverClockState.elapsedMinutes = 0;
-          serverClockState.elapsedSeconds = 0;
-          console.log('Auto-advanced to round', serverClockState.currentRound);
-        }
-      } else {
-        // All rounds complete
-        serverClockState.isRunning = false;
-        serverClockState.minutes = 0;
-        serverClockState.seconds = 0;
-        serverClockState.elapsedMinutes = elapsedMinutes;
-        serverClockState.elapsedSeconds = elapsedSeconds;
-        console.log('Timer completed - all rounds finished');
-      }
-  } else {
-    serverClockState.minutes = newMinutes;
-    serverClockState.seconds = adjustedSeconds;
-    serverClockState.elapsedMinutes = elapsedMinutes;
-    serverClockState.elapsedSeconds = elapsedSeconds;
+      // Timer completed
+      timer.isRunning = false;
+      timer.minutes = 0;
+      timer.seconds = 0;
+      timer.elapsedMinutes = elapsedMinutes;
+      timer.elapsedSeconds = elapsedSeconds;
+      stopServerTimer(timerId);
+      console.log(`Timer ${timerId} completed`);
+    } else {
+      timer.minutes = newMinutes;
+      timer.seconds = adjustedSeconds;
+      timer.elapsedMinutes = elapsedMinutes;
+      timer.elapsedSeconds = elapsedSeconds;
+    }
   }
-  }
-}
 }
 
 wss.on('connection', ws => {
@@ -338,14 +286,9 @@ wss.on('connection', ws => {
       const data = JSON.parse(msg.toString());
       console.log('WebSocket message received:', data.type);
       if (data.type === 'sync-settings') {
-        // Sync settings from client (initial time, rounds, between rounds config)
-        serverClockState.initialTime = data.initialTime || serverClockState.initialTime;
-        serverClockState.totalRounds = data.totalRounds || serverClockState.totalRounds;
-        if (typeof data.betweenRoundsEnabled === 'boolean') {
-          serverClockState.betweenRoundsEnabled = data.betweenRoundsEnabled;
-        }
-        if (typeof data.betweenRoundsTime === 'number') {
-          serverClockState.betweenRoundsTime = data.betweenRoundsTime;
+        // Sync settings from client
+        if (data.timers && Array.isArray(data.timers)) {
+          serverClockState.timers = data.timers;
         }
         if (typeof data.ntpSyncEnabled === 'boolean') {
           serverClockState.ntpSyncEnabled = data.ntpSyncEnabled;
@@ -394,228 +337,184 @@ wss.on('connection', ws => {
   });
 });
 
-// Start the server timer immediately
-startServerTimer();
-
-app.post('/api/start', (_req, res) => {
-  console.log('API: Start timer');
-  if (!serverClockState.isRunning) {
-    serverClockState.startTime = {
-      minutes: serverClockState.minutes,
-      seconds: serverClockState.seconds
+// Timer-specific API endpoints
+app.post('/api/timer/:id/start', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+  
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+  
+  console.log(`API: Start timer ${timerId}`);
+  if (!timer.isRunning) {
+    timer.startTime = {
+      minutes: timer.minutes,
+      seconds: timer.seconds
     };
   }
-  if (serverClockState.isPaused && serverClockState.pauseStartTime) {
-    serverClockState.totalPausedTime += Math.floor(
-      (Date.now() + serverClockState.ntpOffset - serverClockState.pauseStartTime) /
-        1000
+  if (timer.isPaused && timer.pauseStartTime) {
+    timer.totalPausedTime += Math.floor(
+      (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
     );
   }
-  serverClockState.isRunning = true;
-  serverClockState.isPaused = false;
-  serverClockState.pauseStartTime = null;
-  serverClockState.currentPauseDuration = 0;
-  serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
-  broadcast({ action: 'start' });
+  timer.isRunning = true;
+  timer.isPaused = false;
+  timer.pauseStartTime = null;
+  timer.currentPauseDuration = 0;
+  timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+  
+  startServerTimer(timerId);
+  broadcast({ action: 'start', timerId });
   res.json({ success: true });
 });
 
-app.post('/api/pause', (_req, res) => {
-  console.log('API: Pause/Resume timer');
-  if (serverClockState.isPaused) {
+app.post('/api/timer/:id/pause', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+  
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+  
+  console.log(`API: Pause/Resume timer ${timerId}`);
+  if (timer.isPaused) {
     // Resume
-    if (serverClockState.pauseStartTime) {
-      serverClockState.totalPausedTime += Math.floor(
-        (Date.now() + serverClockState.ntpOffset - serverClockState.pauseStartTime) /
-          1000
+    if (timer.pauseStartTime) {
+      timer.totalPausedTime += Math.floor(
+        (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
       );
     }
-    serverClockState.isPaused = false;
-    serverClockState.pauseStartTime = null;
-    serverClockState.currentPauseDuration = 0;
-    serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    timer.isPaused = false;
+    timer.pauseStartTime = null;
+    timer.currentPauseDuration = 0;
+    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
   } else {
     // Pause
-    serverClockState.isPaused = true;
-    serverClockState.pauseStartTime = Date.now() + serverClockState.ntpOffset;
-    serverClockState.lastUpdateTime = serverClockState.pauseStartTime;
+    timer.isPaused = true;
+    timer.pauseStartTime = Date.now() + serverClockState.ntpOffset;
+    timer.lastUpdateTime = timer.pauseStartTime;
   }
-  broadcast({ action: 'pause' });
+  broadcast({ action: 'pause', timerId });
   res.json({ success: true });
 });
 
-app.post('/api/reset', (_req, res) => {
-  console.log('API: Reset all');
-  serverClockState.currentRound = 1;
-  serverClockState.minutes = serverClockState.initialTime.minutes;
-  serverClockState.seconds = serverClockState.initialTime.seconds;
-  serverClockState.startTime = { ...serverClockState.initialTime };
-  serverClockState.isRunning = false;
-  serverClockState.isPaused = false;
-  serverClockState.elapsedMinutes = 0;
-  serverClockState.elapsedSeconds = 0;
-  serverClockState.pauseStartTime = null;
-  serverClockState.totalPausedTime = 0;
-  serverClockState.currentPauseDuration = 0;
-  serverClockState.isBetweenRounds = false;
-  serverClockState.betweenRoundsMinutes = 0;
-  serverClockState.betweenRoundsSeconds = 0;
-  serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
-  broadcast({ action: 'reset' });
-  broadcast({ type: 'status', ...serverClockState });
-  res.json({ success: true });
-});
-
-app.post('/api/reset-time', (_req, res) => {
-  console.log('API: Reset time only');
-  serverClockState.minutes = serverClockState.initialTime.minutes;
-  serverClockState.seconds = serverClockState.initialTime.seconds;
-  serverClockState.startTime = { ...serverClockState.initialTime };
-  serverClockState.isRunning = false;
-  serverClockState.isPaused = false;
-  serverClockState.elapsedMinutes = 0;
-  serverClockState.elapsedSeconds = 0;
-  serverClockState.pauseStartTime = null;
-  serverClockState.totalPausedTime = 0;
-  serverClockState.currentPauseDuration = 0;
-  serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
-  broadcast({ action: 'reset-time' });
-  broadcast({ type: 'status', ...serverClockState });
-  res.json({ success: true });
-});
-
-app.post('/api/reset-rounds', (_req, res) => {
-  console.log('API: Reset rounds');
-  serverClockState.currentRound = 1;
-  serverClockState.minutes = serverClockState.initialTime.minutes;
-  serverClockState.seconds = serverClockState.initialTime.seconds;
-  serverClockState.startTime = { ...serverClockState.initialTime };
-  serverClockState.isRunning = false;
-  serverClockState.isPaused = false;
-  serverClockState.elapsedMinutes = 0;
-  serverClockState.elapsedSeconds = 0;
-  serverClockState.pauseStartTime = null;
-  serverClockState.totalPausedTime = 0;
-  serverClockState.currentPauseDuration = 0;
-  serverClockState.isBetweenRounds = false;
-  serverClockState.betweenRoundsMinutes = 0;
-  serverClockState.betweenRoundsSeconds = 0;
-  serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
-  broadcast({ action: 'reset-rounds' });
-  broadcast({ type: 'status', ...serverClockState });
-  res.json({ success: true });
-});
-
-app.post('/api/next-round', (_req, res) => {
-  console.log('API: Next round');
-  if (serverClockState.currentRound < serverClockState.totalRounds) {
-    serverClockState.currentRound += 1;
-    serverClockState.minutes = serverClockState.initialTime.minutes;
-    serverClockState.seconds = serverClockState.initialTime.seconds;
-    serverClockState.startTime = { ...serverClockState.initialTime };
-    serverClockState.elapsedMinutes = 0;
-    serverClockState.elapsedSeconds = 0;
-    serverClockState.isRunning = false;
-    serverClockState.isPaused = false;
-    serverClockState.totalPausedTime = 0;
-    serverClockState.currentPauseDuration = 0;
-    serverClockState.pauseStartTime = null;
-    serverClockState.isBetweenRounds = false;
-    serverClockState.betweenRoundsMinutes = 0;
-    serverClockState.betweenRoundsSeconds = 0;
-    serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+app.post('/api/timer/:id/reset', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+  
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
   }
-  broadcast({ action: 'next-round' });
+  
+  console.log(`API: Reset timer ${timerId}`);
+  timer.minutes = timer.initialTime.minutes;
+  timer.seconds = timer.initialTime.seconds;
+  timer.startTime = { ...timer.initialTime };
+  timer.isRunning = false;
+  timer.isPaused = false;
+  timer.elapsedMinutes = 0;
+  timer.elapsedSeconds = 0;
+  timer.pauseStartTime = null;
+  timer.totalPausedTime = 0;
+  timer.currentPauseDuration = 0;
+  timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+  
+  stopServerTimer(timerId);
+  broadcast({ action: 'reset', timerId });
   broadcast({ type: 'status', ...serverClockState });
   res.json({ success: true });
 });
 
-app.post('/api/previous-round', (_req, res) => {
-  console.log('API: Previous round');
-  if (serverClockState.currentRound > 1) {
-    serverClockState.currentRound -= 1;
-    serverClockState.minutes = serverClockState.initialTime.minutes;
-    serverClockState.seconds = serverClockState.initialTime.seconds;
-    serverClockState.startTime = { ...serverClockState.initialTime };
-    serverClockState.elapsedMinutes = 0;
-    serverClockState.elapsedSeconds = 0;
-    serverClockState.isRunning = false;
-    serverClockState.isPaused = false;
-    serverClockState.totalPausedTime = 0;
-    serverClockState.currentPauseDuration = 0;
-    serverClockState.pauseStartTime = null;
-    serverClockState.isBetweenRounds = false;
-    serverClockState.betweenRoundsMinutes = 0;
-    serverClockState.betweenRoundsSeconds = 0;
-    serverClockState.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
-  }
-  broadcast({ action: 'previous-round' });
-  broadcast({ type: 'status', ...serverClockState });
-  res.json({ success: true });
-});
-
-app.post('/api/adjust-time', (req, res) => {
-  console.log('API: Adjust time by seconds');
+app.post('/api/timer/:id/adjust-time', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
   const { seconds } = req.body;
-  if (typeof seconds === 'number' && (!serverClockState.isRunning || serverClockState.isPaused) && !serverClockState.isBetweenRounds) {
-    const totalSeconds = serverClockState.minutes * 60 + serverClockState.seconds + seconds;
+  
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+  
+  console.log(`API: Adjust timer ${timerId} by ${seconds} seconds`);
+  if (typeof seconds === 'number' && (!timer.isRunning || timer.isPaused)) {
+    const totalSeconds = timer.minutes * 60 + timer.seconds + seconds;
     const newMinutes = Math.floor(Math.max(0, totalSeconds) / 60);
     const newSeconds = Math.max(0, totalSeconds) % 60;
     
-    serverClockState.minutes = newMinutes;
-    serverClockState.seconds = newSeconds;
-    if (!serverClockState.isRunning) {
-      serverClockState.startTime = { minutes: newMinutes, seconds: newSeconds };
+    timer.minutes = newMinutes;
+    timer.seconds = newSeconds;
+    if (!timer.isRunning) {
+      timer.startTime = { minutes: newMinutes, seconds: newSeconds };
     }
     
-    broadcast({ action: 'adjust-time', minutes: newMinutes, seconds: newSeconds });
+    broadcast({ action: 'adjust-time', timerId, minutes: newMinutes, seconds: newSeconds });
     broadcast({ type: 'status', ...serverClockState });
   }
   res.json({ success: true });
 });
 
-app.post('/api/set-time', (req, res) => {
-  console.log('API: Set time');
+app.post('/api/timer/:id/set-time', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
   const { minutes, seconds } = req.body;
-
+  
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+  
+  console.log(`API: Set timer ${timerId} time`);
   const newMinutes = typeof minutes === 'number' ? minutes : 5;
   const newSeconds = typeof seconds === 'number' ? seconds : 0;
 
-  serverClockState.initialTime = { minutes: newMinutes, seconds: newSeconds };
-  serverClockState.minutes = newMinutes;
-  serverClockState.seconds = newSeconds;
-  serverClockState.startTime = { minutes: serverClockState.minutes, seconds: serverClockState.seconds };
-  serverClockState.elapsedMinutes = 0;
-  serverClockState.elapsedSeconds = 0;
-  serverClockState.isRunning = false;
-  serverClockState.isPaused = false;
-  serverClockState.totalPausedTime = 0;
-  serverClockState.currentPauseDuration = 0;
-  serverClockState.pauseStartTime = null;
-  broadcast({ action: 'set-time', minutes: newMinutes, seconds: newSeconds });
-  // Immediately broadcast updated status so all clients reflect the change
+  timer.initialTime = { minutes: newMinutes, seconds: newSeconds };
+  timer.minutes = newMinutes;
+  timer.seconds = newSeconds;
+  timer.startTime = { minutes: timer.minutes, seconds: timer.seconds };
+  timer.elapsedMinutes = 0;
+  timer.elapsedSeconds = 0;
+  timer.isRunning = false;
+  timer.isPaused = false;
+  timer.totalPausedTime = 0;
+  timer.currentPauseDuration = 0;
+  timer.pauseStartTime = null;
+  
+  stopServerTimer(timerId);
+  broadcast({ action: 'set-time', timerId, minutes: newMinutes, seconds: newSeconds });
   broadcast({ type: 'status', ...serverClockState });
   res.json({ success: true });
 });
 
-app.post('/api/set-rounds', (req, res) => {
-  console.log('API: Set rounds');
-  const { rounds } = req.body;
-  serverClockState.totalRounds = rounds || 3;
-  serverClockState.currentRound = 1;
-  broadcast({ action: 'set-rounds', rounds });
-  res.json({ success: true });
+// Legacy API endpoints (for compatibility)
+app.post('/api/start', (req, res) => {
+  const timerId = serverClockState.activeTimerId || 1;
+  req.params.id = timerId.toString();
+  return app._router.handle(req, res, () => {});
 });
 
-app.post('/api/set-between-rounds', (req, res) => {
-  console.log('API: Set between rounds settings');
-  const { enabled, time } = req.body;
-  if (typeof enabled === 'boolean') {
-    serverClockState.betweenRoundsEnabled = enabled;
-  }
-  if (typeof time === 'number') {
-    serverClockState.betweenRoundsTime = time;
-  }
+app.post('/api/pause', (req, res) => {
+  const timerId = serverClockState.activeTimerId || 1;
+  req.params.id = timerId.toString();
+  return app._router.handle(req, res, () => {});
+});
+
+app.post('/api/reset', (req, res) => {
+  console.log('API: Reset all timers');
+  serverClockState.timers.forEach(timer => {
+    timer.minutes = timer.initialTime.minutes;
+    timer.seconds = timer.initialTime.seconds;
+    timer.startTime = { ...timer.initialTime };
+    timer.isRunning = false;
+    timer.isPaused = false;
+    timer.elapsedMinutes = 0;
+    timer.elapsedSeconds = 0;
+    timer.pauseStartTime = null;
+    timer.totalPausedTime = 0;
+    timer.currentPauseDuration = 0;
+    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    stopServerTimer(timer.id);
+  });
+  broadcast({ action: 'reset' });
+  broadcast({ type: 'status', ...serverClockState });
   res.json({ success: true });
 });
 
@@ -635,44 +534,6 @@ app.post('/api/set-ntp-sync', (req, res) => {
     startNtpSync();
   } else {
     stopNtpSync();
-  }
-  res.json({ success: true });
-});
-
-app.post('/api/add-second', (_req, res) => {
-  console.log('API: Add one second');
-  if ((!serverClockState.isRunning || serverClockState.isPaused) && !serverClockState.isBetweenRounds) {
-    const totalSeconds = serverClockState.minutes * 60 + serverClockState.seconds + 1;
-    const newMinutes = Math.floor(totalSeconds / 60);
-    const newSeconds = totalSeconds % 60;
-
-    serverClockState.minutes = newMinutes;
-    serverClockState.seconds = newSeconds;
-    if (!serverClockState.isRunning) {
-      serverClockState.startTime = { minutes: newMinutes, seconds: newSeconds };
-    }
-    
-    broadcast({ action: 'add-second', minutes: newMinutes, seconds: newSeconds });
-    broadcast({ type: 'status', ...serverClockState });
-  }
-  res.json({ success: true });
-});
-
-app.post('/api/remove-second', (_req, res) => {
-  console.log('API: Remove one second');
-  if ((!serverClockState.isRunning || serverClockState.isPaused) && !serverClockState.isBetweenRounds) {
-    const totalSeconds = Math.max(0, serverClockState.minutes * 60 + serverClockState.seconds - 1);
-    const newMinutes = Math.floor(totalSeconds / 60);
-    const newSeconds = totalSeconds % 60;
-
-    serverClockState.minutes = newMinutes;
-    serverClockState.seconds = newSeconds;
-    if (!serverClockState.isRunning) {
-      serverClockState.startTime = { minutes: newMinutes, seconds: newSeconds };
-    }
-    
-    broadcast({ action: 'remove-second', minutes: newMinutes, seconds: newSeconds });
-    broadcast({ type: 'status', ...serverClockState });
   }
   res.json({ success: true });
 });
@@ -710,7 +571,7 @@ app.get('/api/status', (req, res) => {
     ...serverClockState,
     serverTime: Date.now() + serverClockState.ntpOffset,
     ntpOffset: serverClockState.ntpOffset,
-    api_version: "1.0.0",
+    api_version: "2.0.0",
     connection_protocol: "http_rest_websocket"
   });
 });
@@ -718,12 +579,12 @@ app.get('/api/status', (req, res) => {
 // Enhanced API documentation endpoint
 app.get('/api/docs', (req, res) => {
   res.json({
-    title: "Tournament Clock API Documentation",
-    version: "1.0.0",
+    title: "Multi-Timer API Documentation",
+    version: "2.0.0",
     base_url: `http://${req.get('host')}`,
     connection_protocols: {
       http_rest: {
-        description: "HTTP REST API for clock control and status",
+        description: "HTTP REST API for timer control and status",
         base_path: "/api"
       },
       websocket: {
@@ -733,32 +594,25 @@ app.get('/api/docs', (req, res) => {
       }
     },
     endpoints: {
-      control: {
-        "POST /api/start": "Start the countdown timer",
-        "POST /api/pause": "Pause/Resume the timer",
-        "POST /api/reset": "Reset timer to initial settings",
-        "POST /api/reset-time": "Reset only the timer",
-        "POST /api/reset-rounds": "Reset timer and round count",
-        "POST /api/next-round": "Skip to next round",
-        "POST /api/previous-round": "Go to previous round",
-        "POST /api/adjust-time": {
-          description: "Adjust time by seconds (only when stopped or paused)",
+      timer_control: {
+        "POST /api/timer/:id/start": "Start specific timer (1-5)",
+        "POST /api/timer/:id/pause": "Pause/Resume specific timer (1-5)",
+        "POST /api/timer/:id/reset": "Reset specific timer (1-5)",
+        "POST /api/timer/:id/adjust-time": {
+          description: "Adjust specific timer by seconds (only when stopped or paused)",
           body: { seconds: "number (positive or negative)" }
+        },
+        "POST /api/timer/:id/set-time": {
+          description: "Set specific timer duration",
+          body: { minutes: "number", seconds: "number" }
         }
       },
+      legacy_control: {
+        "POST /api/start": "Start active timer (legacy)",
+        "POST /api/pause": "Pause/Resume active timer (legacy)",
+        "POST /api/reset": "Reset all timers"
+      },
       configuration: {
-        "POST /api/set-time": {
-          description: "Set timer duration",
-          body: { minutes: "number", seconds: "number" }
-        },
-        "POST /api/set-rounds": {
-          description: "Set total rounds",
-          body: { rounds: "number" }
-        },
-        "POST /api/set-between-rounds": {
-          description: "Configure between rounds timer",
-          body: { enabled: "boolean", time: "number (seconds)" }
-        },
         "POST /api/set-ntp-sync": {
           description: "Configure NTP sync settings",
           body: { enabled: "boolean", interval: "number (seconds)", driftThreshold: "number (milliseconds)" }
@@ -766,68 +620,26 @@ app.get('/api/docs', (req, res) => {
       },
       status: {
         "GET /api/status": {
-          description: "Get current timer state",
-          query_params: {
-            fields: "Comma-separated list of specific fields to return"
-          },
+          description: "Get current state of all timers",
           response_fields: {
-            minutes: "Current minutes remaining",
-            seconds: "Current seconds remaining",
-            currentRound: "Current round number",
-            totalRounds: "Total number of rounds",
-            isRunning: "Whether timer is active",
-            isPaused: "Whether timer is paused",
-            elapsedMinutes: "Minutes elapsed in current round",
-            elapsedSeconds: "Seconds elapsed in current round",
-            isBetweenRounds: "Whether in between-rounds phase",
-            betweenRoundsMinutes: "Between rounds timer minutes",
-            betweenRoundsSeconds: "Between rounds timer seconds",
-            betweenRoundsEnabled: "Between rounds timer enabled",
-            betweenRoundsTime: "Between rounds timer duration (seconds)",
-            totalPausedTime: "Total time paused (seconds)",
-            currentPauseDuration: "Current pause duration (seconds)",
+            timers: "Array of timer objects",
+            activeTimerId: "Currently selected timer ID",
+            ntpSyncEnabled: "NTP sync status",
             serverTime: "Server timestamp",
-            api_version: "API version",
-            connection_protocol: "Supported protocols"
+            api_version: "API version"
           }
         }
-      },
-      display: {
-        "GET /clockpretty": "Beautiful dark dashboard display (read-only)",
-        "GET /clockarena": "Compact arena-style countdown display"
       },
       documentation: {
         "GET /api/docs": "This API documentation"
       }
     },
-    websocket_messages: {
-      incoming: {
-        "sync-settings": "Sync client settings to server"
-      },
-      outgoing: {
-        status: "Real-time clock state updates",
-        action: "Action confirmations"
-      }
-    },
-    integration_examples: {
-      bitfocus_companion: {
-        module: "Generic HTTP",
-        base_url: `http://${req.get('host')}`,
-        examples: {
-          start_button: "POST /api/start",
-          pause_button: "POST /api/pause",
-          reset_button: "POST /api/reset",
-          status_feedback: "GET /api/status?fields=minutes,seconds,isRunning",
-          adjust_time_up: "POST /api/adjust-time -d '{\"seconds\":1}'",
-          adjust_time_down: "POST /api/adjust-time -d '{\"seconds\":-1}'"
-        }
-      },
-      curl_examples: {
-        start_timer: `curl -X POST http://${req.get('host')}/api/start`,
-        get_status: `curl http://${req.get('host')}/api/status`,
-        set_time: `curl -X POST http://${req.get('host')}/api/set-time -H "Content-Type: application/json" -d '{"minutes":5,"seconds":30}'`,
-        adjust_time: `curl -X POST http://${req.get('host')}/api/adjust-time -H "Content-Type: application/json" -d '{"seconds":10}'`
-      }
+    timer_examples: {
+      start_timer_1: `curl -X POST http://${req.get('host')}/api/timer/1/start`,
+      pause_timer_2: `curl -X POST http://${req.get('host')}/api/timer/2/pause`,
+      reset_timer_3: `curl -X POST http://${req.get('host')}/api/timer/3/reset`,
+      set_timer_4_time: `curl -X POST http://${req.get('host')}/api/timer/4/set-time -H "Content-Type: application/json" -d '{"minutes":10,"seconds":0}'`,
+      adjust_timer_5: `curl -X POST http://${req.get('host')}/api/timer/5/adjust-time -H "Content-Type: application/json" -d '{"seconds":30}'`
     }
   });
 });
@@ -842,7 +654,7 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
   console.log(`API Documentation: http://localhost:${PORT}/api/docs`);
-  console.log('Server-side clock initialized and running');
+  console.log('Multi-timer server initialized with 5 discrete timers');
   broadcastClients();
   if (serverClockState.ntpSyncEnabled) {
     startNtpSync();

@@ -1,38 +1,38 @@
 
 import React, { useState, useEffect } from 'react';
 
-interface ClockData {
+interface SingleTimer {
+  id: number;
   minutes: number;
   seconds: number;
-  currentRound: number;
-  totalRounds: number;
   isRunning: boolean;
   isPaused: boolean;
   elapsedMinutes: number;
   elapsedSeconds: number;
   totalPausedTime: number;
   currentPauseDuration: number;
-  isBetweenRounds: boolean;
-  betweenRoundsMinutes: number;
-  betweenRoundsSeconds: number;
+}
+
+interface ClockData {
+  timers: SingleTimer[];
+  activeTimerId: number | null;
   ntpOffset?: number;
 }
 
 const ClockPretty = () => {
   const [clockData, setClockData] = useState<ClockData>({
-    minutes: 5,
-    seconds: 0,
-    currentRound: 1,
-    totalRounds: 3,
-    isRunning: false,
-    isPaused: false,
-    elapsedMinutes: 0,
-    elapsedSeconds: 0,
-    totalPausedTime: 0,
-    currentPauseDuration: 0,
-    isBetweenRounds: false,
-    betweenRoundsMinutes: 0,
-    betweenRoundsSeconds: 0,
+    timers: Array.from({ length: 5 }, (_, i) => ({
+      id: i + 1,
+      minutes: 5,
+      seconds: 0,
+      isRunning: false,
+      isPaused: false,
+      elapsedMinutes: 0,
+      elapsedSeconds: 0,
+      totalPausedTime: 0,
+      currentPauseDuration: 0
+    })),
+    activeTimerId: 1,
     ntpOffset: 0
   });
 
@@ -85,17 +85,18 @@ const ClockPretty = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const activeTimer = clockData.timers.find(t => t.id === clockData.activeTimerId);
+  if (!activeTimer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
+
   const getStatusColor = () => {
-    if (clockData.isPaused) return 'text-yellow-400';
-    if (clockData.isBetweenRounds) return 'text-purple-400';
-    if (clockData.isRunning) return 'text-green-400';
+    if (activeTimer.isPaused) return 'text-yellow-400';
+    if (activeTimer.isRunning) return 'text-green-400';
     return 'text-red-400';
   };
 
   const getStatusText = () => {
-    if (clockData.isPaused) return 'PAUSED';
-    if (clockData.isBetweenRounds) return 'BETWEEN ROUNDS';
-    if (clockData.isRunning) return 'RUNNING';
+    if (activeTimer.isPaused) return 'PAUSED';
+    if (activeTimer.isRunning) return 'RUNNING';
     return 'STOPPED';
   };
 
@@ -104,35 +105,44 @@ const ClockPretty = () => {
       {/* Main Timer Display */}
       <div className="text-center mb-8">
         <div className="text-[20rem] font-mono font-bold tracking-wider mb-8 text-white leading-none">
-          {clockData.isBetweenRounds 
-            ? formatTime(clockData.betweenRoundsMinutes, clockData.betweenRoundsSeconds)
-            : formatTime(clockData.minutes, clockData.seconds)
-          }
+          {formatTime(activeTimer.minutes, activeTimer.seconds)}
         </div>
         
         {/* Status Indicator */}
         <div className={`text-6xl font-bold mb-6 ${getStatusColor()}`}>
           {getStatusText()}
-          {clockData.isPaused && (
+          {activeTimer.isPaused && (
             <div className="text-4xl animate-pulse mt-2">
-              {formatDuration(clockData.currentPauseDuration)}
+              {formatDuration(activeTimer.currentPauseDuration)}
             </div>
           )}
         </div>
       </div>
 
-      {/* Round Information */}
+      {/* Timer Information */}
       <div className="text-center mb-8">
         <div className="text-8xl font-bold text-blue-400 mb-4">
-          ROUND {clockData.currentRound} / {clockData.totalRounds}
+          TIMER {activeTimer.id}
         </div>
         
-        {/* Progress Bar */}
-        <div className="w-96 h-6 bg-gray-800 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
-            style={{ width: `${(clockData.currentRound / clockData.totalRounds) * 100}%` }}
-          />
+        {/* All Timers Status */}
+        <div className="flex justify-center space-x-4 mb-6">
+          {clockData.timers.map((timer) => (
+            <div
+              key={timer.id}
+              className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-bold text-lg ${
+                timer.id === clockData.activeTimerId
+                  ? 'bg-blue-500 border-blue-500 text-white'
+                  : timer.isRunning
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : timer.isPaused
+                  ? 'bg-yellow-500 border-yellow-500 text-black'
+                  : 'border-gray-600 text-gray-400'
+              }`}
+            >
+              {timer.id}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -141,18 +151,17 @@ const ClockPretty = () => {
         <div className="bg-gray-900/50 p-8 rounded-2xl border border-gray-700">
           <div className="text-2xl text-gray-400 mb-2">TIME ELAPSED</div>
           <div className="text-5xl font-mono font-bold text-green-400">
-            {formatTime(clockData.elapsedMinutes, clockData.elapsedSeconds)}
+            {formatTime(activeTimer.elapsedMinutes, activeTimer.elapsedSeconds)}
           </div>
         </div>
         
         <div className="bg-gray-900/50 p-8 rounded-2xl border border-gray-700">
           <div className="text-2xl text-gray-400 mb-2">TOTAL PAUSED</div>
           <div className="text-5xl font-mono font-bold text-yellow-400">
-            {formatDuration(clockData.totalPausedTime)}
+            {formatDuration(activeTimer.totalPausedTime)}
           </div>
         </div>
       </div>
-
     </div>
   );
 };

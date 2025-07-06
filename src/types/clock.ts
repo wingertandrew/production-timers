@@ -1,8 +1,8 @@
-export interface ClockState {
+
+export interface SingleTimer {
+  id: number;
   minutes: number;
   seconds: number;
-  currentRound: number;
-  totalRounds: number;
   isRunning: boolean;
   isPaused: boolean;
   elapsedMinutes: number;
@@ -10,11 +10,12 @@ export interface ClockState {
   pauseStartTime: number | null;
   totalPausedTime: number;
   currentPauseDuration: number;
-  isBetweenRounds: boolean;
-  betweenRoundsMinutes: number;
-  betweenRoundsSeconds: number;
-  betweenRoundsEnabled: boolean;
-  betweenRoundsTime: number;
+  initialTime: { minutes: number; seconds: number };
+}
+
+export interface ClockState {
+  timers: SingleTimer[];
+  activeTimerId: number | null;
   ntpSyncEnabled: boolean;
   ntpSyncInterval: number;
   ntpDriftThreshold: number;

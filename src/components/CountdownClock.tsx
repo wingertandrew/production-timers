@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Info, Server, Bug } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ClockState, NTPSyncStatus } from '@/types/clock';
+import { ClockState, SingleTimer, NTPSyncStatus } from '@/types/clock';
 import { useDebugLog } from '@/hooks/useDebugLog';
 import { NTPSyncManager, DEFAULT_NTP_CONFIG } from '@/utils/ntpSync';
 
-import ClockDisplay from './ClockDisplay';
+import TimerCard from './TimerCard';
 import SettingsTab from './SettingsTab';
 import InfoTab from './InfoTab';
 import ApiInfoTab from './ApiInfoTab';
@@ -14,11 +15,10 @@ import DebugTab from './DebugTab';
 import FloatingClock from './FloatingClock';
 
 const CountdownClock = () => {
-  const [clockState, setClockState] = useState<ClockState>({
+  const createInitialTimer = (id: number): SingleTimer => ({
+    id,
     minutes: 5,
     seconds: 0,
-    currentRound: 1,
-    totalRounds: 3,
     isRunning: false,
     isPaused: false,
     elapsedMinutes: 0,
@@ -26,25 +26,22 @@ const CountdownClock = () => {
     pauseStartTime: null,
     totalPausedTime: 0,
     currentPauseDuration: 0,
-    isBetweenRounds: false,
-    betweenRoundsMinutes: 0,
-    betweenRoundsSeconds: 0,
-    betweenRoundsEnabled: true,
-    betweenRoundsTime: 60,
+    initialTime: { minutes: 5, seconds: 0 }
+  });
+
+  const [clockState, setClockState] = useState<ClockState>({
+    timers: Array.from({ length: 5 }, (_, i) => createInitialTimer(i + 1)),
+    activeTimerId: 1,
     ntpSyncEnabled: false,
     ntpSyncInterval: 21600000, // 6 hours default
     ntpDriftThreshold: 50,
     ntpOffset: 0
   });
 
-  const [initialTime, setInitialTime] = useState({ minutes: 5, seconds: 0 });
   const [inputMinutes, setInputMinutes] = useState(5);
   const [inputSeconds, setInputSeconds] = useState(0);
-  const [inputRounds, setInputRounds] = useState(3);
-  const [betweenRoundsEnabled, setBetweenRoundsEnabled] = useState(true);
-  const [betweenRoundsTime, setBetweenRoundsTime] = useState(60);
   const [ntpSyncEnabled, setNtpSyncEnabled] = useState(false);
-  const [ntpSyncInterval, setNtpSyncInterval] = useState(21600000); // 6 hours default
+  const [ntpSyncInterval, setNtpSyncInterval] = useState(21600000);
   const [ntpDriftThreshold, setNtpDriftThreshold] = useState(50);
   const [ntpSyncStatus, setNtpSyncStatus] = useState<NTPSyncStatus>({
     enabled: false,
@@ -86,10 +83,7 @@ const CountdownClock = () => {
           ws.send(JSON.stringify({
             type: 'sync-settings',
             url: window.location.href,
-            initialTime,
-            totalRounds: inputRounds,
-            betweenRoundsEnabled,
-            betweenRoundsTime,
+            timers: clockState.timers,
             ntpSyncEnabled,
             ntpSyncInterval,
             ntpDriftThreshold
@@ -104,8 +98,7 @@ const CountdownClock = () => {
             if (data.type === 'status') {
               setClockState(prev => ({
                 ...prev,
-                ...data,
-                pauseStartTime: data.pauseStartTime
+                ...data
               }));
 
               // Log NTP timestamp if present
@@ -116,21 +109,6 @@ const CountdownClock = () => {
                   localTime: Date.now() + clockState.ntpOffset,
                   timeDiff: data.ntpTimestamp - (Date.now() + clockState.ntpOffset)
                 });
-              }
-
-              // Only update these settings if they exist in the server response
-              // This prevents the server from overriding local setting changes
-              if (typeof data.betweenRoundsEnabled === 'boolean') {
-                setBetweenRoundsEnabled(data.betweenRoundsEnabled);
-              }
-              if (typeof data.betweenRoundsTime === 'number') {
-                setBetweenRoundsTime(data.betweenRoundsTime);
-              }
-              // Remove the automatic NTP sync state updates from server
-              // The server should only update NTP state when explicitly set via API
-              
-              if (data.initialTime) {
-                setInitialTime(data.initialTime);
               }
             } else if (data.type === 'clients') {
               setConnectedClients(data.clients || []);
@@ -235,233 +213,108 @@ const CountdownClock = () => {
     addDebugLog('API', 'External command received', command);
     switch (command.action) {
       case 'start':
-        toast({ title: "Timer Started" });
+        toast({ title: `Timer ${command.timerId || clockState.activeTimerId} Started` });
         break;
       case 'pause':
-        toast({ title: clockState.isPaused ? "Timer Resumed" : "Timer Paused" });
+        const timer = clockState.timers.find(t => t.id === (command.timerId || clockState.activeTimerId));
+        toast({ title: timer?.isPaused ? "Timer Resumed" : "Timer Paused" });
         break;
       case 'reset':
-        toast({ title: 'Timer Reset' });
-        break;
-      case 'reset-time':
-        toast({ title: 'Time Reset' });
-        break;
-      case 'reset-rounds':
-        toast({ title: 'Rounds Reset' });
+        toast({ title: `Timer ${command.timerId || clockState.activeTimerId} Reset` });
         break;
       case 'set-time':
-        setInitialTime({ minutes: command.minutes, seconds: command.seconds });
-        setClockState(prev => ({
-          ...prev,
-          minutes: command.minutes,
-          seconds: command.seconds
-        }));
-        toast({ title: 'Time Set' });
-        break;
-      case 'next-round':
-        toast({ title: `Round ${clockState.currentRound + 1} Started` });
-        break;
-      case 'previous-round':
-        toast({ title: `Round ${clockState.currentRound - 1} Started` });
+        toast({ title: `Timer ${command.timerId || clockState.activeTimerId} Time Set` });
         break;
       case 'adjust-time':
         break;
     }
   };
 
-  const startTimer = async () => {
+  const startTimer = async (timerId: number) => {
     try {
-      const response = await fetch('/api/start', { method: 'POST' });
+      const response = await fetch(`/api/timer/${timerId}/start`, { method: 'POST' });
       if (response.ok) {
-        addDebugLog('UI', 'Timer started via API');
+        addDebugLog('UI', `Timer ${timerId} started via API`);
       }
     } catch (error) {
-      addDebugLog('UI', 'Failed to start timer', { error: error.message });
+      addDebugLog('UI', `Failed to start timer ${timerId}`, { error: error.message });
     }
   };
 
-  const pauseTimer = async () => {
+  const pauseTimer = async (timerId: number) => {
     try {
-      const response = await fetch('/api/pause', { method: 'POST' });
+      const response = await fetch(`/api/timer/${timerId}/pause`, { method: 'POST' });
       if (response.ok) {
-        addDebugLog('UI', 'Timer paused/resumed via API');
+        addDebugLog('UI', `Timer ${timerId} paused/resumed via API`);
       }
     } catch (error) {
-      addDebugLog('UI', 'Failed to pause/resume timer', { error: error.message });
+      addDebugLog('UI', `Failed to pause/resume timer ${timerId}`, { error: error.message });
     }
   };
 
-  const togglePlayPause = () => {
-    if (!clockState.isRunning || clockState.isPaused) {
-      startTimer();
-    } else {
-      pauseTimer();
-    }
-  };
-
-  const resetTime = async () => {
+  const resetTimer = async (timerId: number) => {
     try {
-      const response = await fetch('/api/reset-time', { method: 'POST' });
+      const response = await fetch(`/api/timer/${timerId}/reset`, { method: 'POST' });
       if (response.ok) {
-        addDebugLog('UI', 'Time reset via API');
+        addDebugLog('UI', `Timer ${timerId} reset via API`);
       }
     } catch (error) {
-      addDebugLog('UI', 'Failed to reset time', { error: error.message });
+      addDebugLog('UI', `Failed to reset timer ${timerId}`, { error: error.message });
     }
   };
 
-  const resetRounds = async () => {
-    try {
-      const response = await fetch('/api/reset-rounds', { method: 'POST' });
-      if (response.ok) {
-        addDebugLog('UI', 'Rounds reset via API');
-      }
-    } catch (error) {
-      addDebugLog('UI', 'Failed to reset rounds', { error: error.message });
-    }
-  };
-
-  const resetTimer = () => {
-    resetRounds();
-  };
-
-  const nextRound = async () => {
-    if (clockState.currentRound < clockState.totalRounds) {
-      try {
-        // Ensure server initial time matches current timer settings
-        await fetch('/api/set-time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ minutes: inputMinutes, seconds: inputSeconds })
-        });
-
-        const response = await fetch('/api/next-round', { method: 'POST' });
-        if (response.ok) {
-          addDebugLog('UI', 'Next round via API', {
-            round: clockState.currentRound + 1
-          });
-        }
-      } catch (error) {
-        addDebugLog('UI', 'Failed to advance round', { error: error.message });
-      }
-
-      const newRound = clockState.currentRound + 1;
-      setInitialTime({ minutes: inputMinutes, seconds: inputSeconds });
-      setClockState(prev => ({
-        ...prev,
-        currentRound: newRound,
-        minutes: inputMinutes,
-        seconds: inputSeconds,
-        isRunning: false,
-        isPaused: false,
-        elapsedMinutes: 0,
-        elapsedSeconds: 0,
-        isBetweenRounds: false
-      }));
-    }
-  };
-
-  const previousRound = () => {
-    if (clockState.currentRound > 1) {
-      const newRound = clockState.currentRound - 1;
-      setClockState(prev => ({
-        ...prev,
-        currentRound: newRound,
-        minutes: initialTime.minutes,
-        seconds: initialTime.seconds,
-        isRunning: false,
-        isPaused: false,
-        elapsedMinutes: 0,
-        elapsedSeconds: 0,
-        isBetweenRounds: false
-      }));
-      addDebugLog('UI', 'Previous round', { round: newRound });
-    }
-  };
-
-  const adjustTimeBySeconds = async (secondsToAdd: number) => {
-    if (clockState.isRunning && !clockState.isPaused) return;
-    if (clockState.isBetweenRounds) return;
+  const adjustTimeBySeconds = async (timerId: number, secondsToAdd: number) => {
+    const timer = clockState.timers.find(t => t.id === timerId);
+    if (!timer || (timer.isRunning && !timer.isPaused)) return;
     
     try {
-      const response = await fetch('/api/adjust-time', {
+      const response = await fetch(`/api/timer/${timerId}/adjust-time`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ seconds: secondsToAdd })
       });
       
       if (response.ok) {
-        addDebugLog('UI', 'Time adjusted via API', { adjustment: secondsToAdd });
+        addDebugLog('UI', `Timer ${timerId} time adjusted via API`, { adjustment: secondsToAdd });
       }
     } catch (error) {
-      addDebugLog('UI', 'Failed to adjust time', { error: error.message });
+      addDebugLog('UI', `Failed to adjust timer ${timerId} time`, { error: error.message });
     }
   };
 
-  const setTime = async (minutes: number, seconds: number) => {
+  const setTime = async (timerId: number, minutes: number, seconds: number) => {
     const validMinutes = Math.max(0, Math.min(59, minutes));
     const validSeconds = Math.max(0, Math.min(59, seconds));
     
     try {
-      const response = await fetch('/api/set-time', {
+      const response = await fetch(`/api/timer/${timerId}/set-time`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ minutes: validMinutes, seconds: validSeconds })
       });
       
       if (response.ok) {
-        setInitialTime({ minutes: validMinutes, seconds: validSeconds });
-        setClockState(prev => ({
-          ...prev,
-          minutes: validMinutes,
-          seconds: validSeconds
-        }));
-        addDebugLog('UI', 'Time set via API', { minutes: validMinutes, seconds: validSeconds });
+        addDebugLog('UI', `Timer ${timerId} time set via API`, { minutes: validMinutes, seconds: validSeconds });
       }
     } catch (error) {
-      addDebugLog('UI', 'Failed to set time', { error: error.message });
-    }
-  };
-
-  const setRounds = async (rounds: number) => {
-    const validRounds = Math.max(1, Math.min(15, rounds));
-    
-    try {
-      const response = await fetch('/api/set-rounds', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rounds: validRounds })
-      });
-      
-      if (response.ok) {
-        addDebugLog('UI', 'Rounds set via API', { rounds: validRounds });
-      }
-    } catch (error) {
-      addDebugLog('UI', 'Failed to set rounds', { error: error.message });
+      addDebugLog('UI', `Failed to set timer ${timerId} time`, { error: error.message });
     }
   };
 
   const applySettings = async () => {
     addDebugLog('UI', 'Settings applied', { 
       time: { minutes: inputMinutes, seconds: inputSeconds },
-      rounds: inputRounds,
-      betweenRoundsEnabled,
-      betweenRoundsTime,
       ntpSyncEnabled,
       ntpSyncInterval,
       ntpDriftThreshold
     });
     
-    await setTime(inputMinutes, inputSeconds);
-    await setRounds(inputRounds);
+    // Apply time to active timer
+    if (clockState.activeTimerId) {
+      await setTime(clockState.activeTimerId, inputMinutes, inputSeconds);
+    }
     
     try {
-      await fetch('/api/set-between-rounds', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: betweenRoundsEnabled, time: betweenRoundsTime })
-      });
-      
       await fetch('/api/set-ntp-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -484,11 +337,13 @@ const CountdownClock = () => {
     toast({ title: 'Command Copied', description: command });
   };
 
+  const activeTimer = clockState.timers.find(t => t.id === clockState.activeTimerId);
+
   return (
     <div className="min-h-screen bg-black text-white">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
         <TabsList className="grid w-full grid-cols-5 mb-0 bg-gray-800 border-gray-700">
-          <TabsTrigger value="clock" className="text-lg py-3 data-[state=active]:bg-gray-600">Clock</TabsTrigger>
+          <TabsTrigger value="clock" className="text-lg py-3 data-[state=active]:bg-gray-600">Timers</TabsTrigger>
           <TabsTrigger value="settings" className="text-lg py-3 data-[state=active]:bg-gray-600">
             <Settings className="w-5 h-5 mr-2" />
             Settings
@@ -508,44 +363,75 @@ const CountdownClock = () => {
         </TabsList>
 
         {/* Show FloatingClock bar on non-clock tabs */}
-        {activeTab !== 'clock' && (
+        {activeTab !== 'clock' && activeTimer && (
           <FloatingClock 
-            clockState={clockState} 
+            clockState={{
+              minutes: activeTimer.minutes,
+              seconds: activeTimer.seconds,
+              currentRound: 1,
+              totalRounds: 1,
+              isRunning: activeTimer.isRunning,
+              isPaused: activeTimer.isPaused,
+              elapsedMinutes: activeTimer.elapsedMinutes,
+              elapsedSeconds: activeTimer.elapsedSeconds,
+              pauseStartTime: activeTimer.pauseStartTime,
+              totalPausedTime: activeTimer.totalPausedTime,
+              currentPauseDuration: activeTimer.currentPauseDuration,
+              isBetweenRounds: false,
+              betweenRoundsMinutes: 0,
+              betweenRoundsSeconds: 0,
+              betweenRoundsEnabled: false,
+              betweenRoundsTime: 0,
+              ntpSyncEnabled: clockState.ntpSyncEnabled,
+              ntpSyncInterval: clockState.ntpSyncInterval,
+              ntpDriftThreshold: clockState.ntpDriftThreshold,
+              ntpOffset: clockState.ntpOffset
+            }}
             ntpSyncStatus={ntpSyncStatus}
           />
         )}
 
-        <TabsContent value="clock" className="space-y-4">
-          <ClockDisplay
-            clockState={clockState}
-            ipAddress={ipAddress}
-            betweenRoundsEnabled={betweenRoundsEnabled}
-            betweenRoundsTime={betweenRoundsTime}
-            ntpSyncStatus={ntpSyncStatus}
-            onTogglePlayPause={togglePlayPause}
-            onNextRound={nextRound}
-            onPreviousRound={previousRound}
-            onResetTime={resetTime}
-            onResetRounds={resetRounds}
-            onAdjustTimeBySeconds={adjustTimeBySeconds}
-          />
+        <TabsContent value="clock" className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {clockState.timers.map((timer) => (
+              <TimerCard
+                key={timer.id}
+                timer={timer}
+                isActive={timer.id === clockState.activeTimerId}
+                onStart={startTimer}
+                onPause={pauseTimer}
+                onReset={resetTimer}
+                onAdjustTime={adjustTimeBySeconds}
+                onSetActive={(id) => setClockState(prev => ({ ...prev, activeTimerId: id }))}
+              />
+            ))}
+          </div>
+          
+          {activeTimer && (
+            <div className="mt-8 text-center">
+              <h2 className="text-2xl font-bold mb-4">Active Timer: {activeTimer.id}</h2>
+              <div className="text-6xl font-mono font-bold text-white mb-4">
+                {`${activeTimer.minutes.toString().padStart(2, '0')}:${activeTimer.seconds.toString().padStart(2, '0')}`}
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="settings">
           <SettingsTab
             inputMinutes={inputMinutes}
             inputSeconds={inputSeconds}
-            inputRounds={inputRounds}
-            betweenRoundsEnabled={betweenRoundsEnabled}
-            betweenRoundsTime={betweenRoundsTime}
+            inputRounds={1}
+            betweenRoundsEnabled={false}
+            betweenRoundsTime={0}
             ntpSyncEnabled={ntpSyncEnabled}
             ntpSyncInterval={ntpSyncInterval}
             ntpDriftThreshold={ntpDriftThreshold}
             setInputMinutes={setInputMinutes}
             setInputSeconds={setInputSeconds}
-            setInputRounds={setInputRounds}
-            setBetweenRoundsEnabled={setBetweenRoundsEnabled}
-            setBetweenRoundsTime={setBetweenRoundsTime}
+            setInputRounds={() => {}} // No-op since we don't use rounds
+            setBetweenRoundsEnabled={() => {}} // No-op
+            setBetweenRoundsTime={() => {}} // No-op
             setNtpSyncEnabled={setNtpSyncEnabled}
             setNtpSyncInterval={setNtpSyncInterval}
             setNtpDriftThreshold={setNtpDriftThreshold}

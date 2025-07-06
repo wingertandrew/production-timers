@@ -1,30 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
 
-interface ClockData {
+interface SingleTimer {
+  id: number;
   minutes: number;
   seconds: number;
-  currentRound: number;
-  totalRounds: number;
   isRunning: boolean;
   isPaused: boolean;
-  isBetweenRounds: boolean;
-  betweenRoundsMinutes: number;
-  betweenRoundsSeconds: number;
+}
+
+interface ClockData {
+  timers: SingleTimer[];
+  activeTimerId: number | null;
   ntpOffset?: number;
 }
 
 const ClockArena = () => {
   const [clockData, setClockData] = useState<ClockData>({
-    minutes: 5,
-    seconds: 0,
-    currentRound: 1,
-    totalRounds: 3,
-    isRunning: false,
-    isPaused: false,
-    isBetweenRounds: false,
-    betweenRoundsMinutes: 0,
-    betweenRoundsSeconds: 0,
+    timers: Array.from({ length: 5 }, (_, i) => ({
+      id: i + 1,
+      minutes: 5,
+      seconds: 0,
+      isRunning: false,
+      isPaused: false
+    })),
+    activeTimerId: 1,
     ntpOffset: 0
   });
 
@@ -71,16 +71,18 @@ const ClockArena = () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const activeTimer = clockData.timers.find(t => t.id === clockData.activeTimerId);
+  if (!activeTimer) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
+
   const getTimerColor = () => {
-    if (clockData.isPaused) return 'text-yellow-400';
-    if (clockData.isBetweenRounds) return 'text-purple-400';
-    if (clockData.isRunning) return 'text-green-400';
-    if (!clockData.isBetweenRounds && clockData.minutes === 0 && clockData.seconds <= 10) return 'text-red-400 animate-pulse';
+    if (activeTimer.isPaused) return 'text-yellow-400';
+    if (activeTimer.isRunning) return 'text-green-400';
+    if (activeTimer.minutes === 0 && activeTimer.seconds <= 10) return 'text-red-400 animate-pulse';
     return 'text-white';
   };
 
-  const getRoundColor = () => {
-    return clockData.isRunning ? 'text-blue-400' : 'text-gray-400';
+  const getTimerIdColor = () => {
+    return activeTimer.isRunning ? 'text-blue-400' : 'text-gray-400';
   };
 
   return (
@@ -88,37 +90,28 @@ const ClockArena = () => {
       {/* Top Left Corner - Main Timer */}
       <div className="absolute top-8 left-8">
         <div className={`text-8xl font-mono font-bold tracking-wider mb-2 ${getTimerColor()}`}>
-          {clockData.isBetweenRounds 
-            ? formatTime(clockData.betweenRoundsMinutes, clockData.betweenRoundsSeconds)
-            : formatTime(clockData.minutes, clockData.seconds)
-          }
+          {formatTime(activeTimer.minutes, activeTimer.seconds)}
         </div>
         
-        {/* Round Indicator */}
-        <div className={`text-2xl font-bold ${getRoundColor()}`}>
-          R{clockData.currentRound}/{clockData.totalRounds}
+        {/* Timer ID Indicator */}
+        <div className={`text-2xl font-bold ${getTimerIdColor()}`}>
+          TIMER {activeTimer.id}
         </div>
         
         {/* Status Indicator */}
-        {clockData.isPaused && (
+        {activeTimer.isPaused && (
           <div className="text-xl text-yellow-400 animate-pulse mt-1">
             ⏸️ PAUSED
           </div>
         )}
         
-        {clockData.isBetweenRounds && (
-          <div className="text-xl text-purple-400 animate-pulse mt-1">
-            🔄 BETWEEN ROUNDS
-          </div>
-        )}
-        
-        {!clockData.isRunning && !clockData.isPaused && !clockData.isBetweenRounds && (
+        {!activeTimer.isRunning && !activeTimer.isPaused && (
           <div className="text-xl text-red-400 mt-1">
             ⏹️ STOPPED
           </div>
         )}
         
-        {clockData.isRunning && !clockData.isPaused && !clockData.isBetweenRounds && (
+        {activeTimer.isRunning && !activeTimer.isPaused && (
           <div className="text-xl text-green-400 mt-1">
             ▶️ RUNNING
           </div>
@@ -145,22 +138,28 @@ const ClockArena = () => {
       {/* Center Logo/Text Area (Available for customization) */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-6xl font-bold text-gray-800 opacity-20">
-          ARENA
+          MULTI-TIMER
         </div>
       </div>
 
-      {/* Bottom Right - Round Progress */}
+      {/* Bottom Right - Timer Status Grid */}
       <div className="absolute bottom-8 right-8">
-        <div className="flex space-x-2">
-          {Array.from({ length: clockData.totalRounds }, (_, i) => (
+        <div className="grid grid-cols-5 gap-2">
+          {clockData.timers.map((timer) => (
             <div
-              key={i}
-              className={`w-6 h-6 rounded-full border-2 ${
-                i + 1 <= clockData.currentRound
-                  ? 'bg-blue-500 border-blue-500'
-                  : 'border-gray-600'
+              key={timer.id}
+              className={`w-8 h-8 rounded border-2 flex items-center justify-center text-xs font-bold ${
+                timer.id === clockData.activeTimerId
+                  ? 'bg-blue-500 border-blue-500 text-white'
+                  : timer.isRunning
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : timer.isPaused
+                  ? 'bg-yellow-500 border-yellow-500 text-black'
+                  : 'border-gray-600 text-gray-400'
               }`}
-            />
+            >
+              {timer.id}
+            </div>
           ))}
         </div>
       </div>
