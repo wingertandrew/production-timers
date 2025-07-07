@@ -381,6 +381,7 @@ const CountdownClock = () => {
             onResetTimer={resetTimer}
             onSetTimerTime={setTimerTime}
             onSetActiveTimer={(id) => setClockState(prev => ({ ...prev, activeTimerId: id }))}
+            onSetTimerName={setTimerName}
           />
         </TabsContent>
 
