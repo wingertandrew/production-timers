@@ -17,6 +17,7 @@ interface ClockDisplayProps {
   onResetTimer: (timerId: number) => void;
   onSetTimerTime: (timerId: number, minutes: number, seconds: number) => void;
   onSetActiveTimer: (timerId: number) => void;
+  onSetTimerName: (timerId: number, name: string) => void;
 }
 
 const ClockDisplay: React.FC<ClockDisplayProps> = ({
@@ -30,11 +31,14 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
   onPauseTimer,
   onResetTimer,
   onSetTimerTime,
-  onSetActiveTimer
+  onSetActiveTimer,
+  onSetTimerName
 }) => {
   const [editingTimer, setEditingTimer] = useState<number | null>(null);
   const [editMinutes, setEditMinutes] = useState(0);
   const [editSeconds, setEditSeconds] = useState(0);
+  const [editingName, setEditingName] = useState<number | null>(null);
+  const [editNameValue, setEditNameValue] = useState('');
 
   const getTimerBackgroundColor = (timer: any) => {
     const remaining = timer.minutes * 60 + timer.seconds;
@@ -78,6 +82,22 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
     }
   };
 
+  const startNameEdit = (timer: any) => {
+    setEditingName(timer.id);
+    setEditNameValue(timer.name || `Timer ${timer.id}`);
+  };
+
+  const saveNameEdit = () => {
+    if (editingName && onSetTimerName) {
+      onSetTimerName(editingName, editNameValue);
+      setEditingName(null);
+    }
+  };
+
+  const cancelNameEdit = () => {
+    setEditingName(null);
+  };
+
   return (
     <div className="min-h-screen bg-black text-white p-4 overflow-hidden">
       <div className="h-screen flex flex-col max-w-[1920px] mx-auto">
@@ -118,6 +138,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
               : 0;
             const isActive = timer.id === clockState.activeTimerId;
             const isEditing = editingTimer === timer.id;
+            const isEditingName = editingName === timer.id;
             const backgroundColorClass = getTimerBackgroundColor(timer);
             
             return (
@@ -130,9 +151,36 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
               >
                 <div className="px-6 py-4">
                   <div className="flex items-center gap-6">
-                    {/* Timer Name and ID */}
+                    {/* Timer Name and ID - Editable */}
                     <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[200px]`}>
-                      {timer.name || `Timer ${timer.id}`}
+                      {isEditingName ? (
+                        <Input
+                          type="text"
+                          value={editNameValue}
+                          onChange={(e) => setEditNameValue(e.target.value)}
+                          onBlur={saveNameEdit}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                              saveNameEdit();
+                            } else if (e.key === 'Escape') {
+                              cancelNameEdit();
+                            }
+                          }}
+                          className="bg-transparent border-b-2 border-blue-500 text-3xl font-bold text-white p-0 h-auto focus:outline-none"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startNameEdit(timer);
+                          }}
+                          className="cursor-pointer hover:underline"
+                        >
+                          {timer.name || `Timer ${timer.id}`}
+                        </span>
+                      )}
                     </div>
 
                     {/* Times - Centered */}
@@ -221,11 +269,11 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
+                  {/* Progress Bar with dynamic countdown animation */}
                   <div className="mt-4">
                     <div className="w-full h-4 bg-gray-700 rounded">
                       <div
-                        className="h-full rounded transition-all duration-300"
+                        className="h-full rounded transition-all duration-1000 ease-linear"
                         style={{ 
                           width: `${progress}%`, 
                           backgroundColor: timer.isRunning && !timer.isPaused ? '#22c55e' : '#6b7280'

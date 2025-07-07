@@ -39,6 +39,8 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     return vals;
   });
 
+  const [headerText, setHeaderText] = useState(clockState.clockPrettyHeader || 'TIMER OVERVIEW');
+
   useEffect(() => {
     setNameValues(prev => {
       const vals = { ...prev };
@@ -63,6 +65,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
     onSetTimerName(timerId, name);
   };
 
+  const handleHeaderTextChange = (value: string) => {
+    setHeaderText(value);
+    // Auto-save header text - you'd need to implement this in the parent component
+    // For now, just update local state
+  };
+
   return (
     <div className="space-y-6 p-4 min-h-screen bg-gray-900">
       <Card className="bg-gray-800 border-gray-600">
@@ -71,6 +79,28 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
         </CardHeader>
         <CardContent className="space-y-8">
           
+          {/* Clock Pretty Header Setting */}
+          <Card className="bg-gray-700 border-gray-500">
+            <CardHeader>
+              <CardTitle className="text-2xl text-white flex items-center gap-3">
+                <Clock className="w-8 h-8" />
+                Clock Pretty Display Header
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center space-y-4">
+                <label className="text-white text-xl font-medium">Header Text</label>
+                <Input
+                  type="text"
+                  value={headerText}
+                  onChange={(e) => handleHeaderTextChange(e.target.value)}
+                  className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl max-w-md"
+                  placeholder="TIMER OVERVIEW"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Individual Timer Controls */}
           <Card className="bg-gray-700 border-gray-500">
             <CardHeader>
@@ -85,7 +115,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   <div className="flex items-center gap-6">
                     {/* Timer Name/Identifier */}
                     <div className="flex flex-col items-center">
-                      <label className="text-white text-sm mb-1">Timer Name</label>
+                      <label className="text-white text-sm mb-1">Timer Name/ID</label>
                       <Input
                         type="text"
                         value={nameValues[timer.id] ?? timer.name ?? `Timer ${timer.id}`}
@@ -97,7 +127,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                             (e.target as HTMLInputElement).blur();
                           }
                         }}
-                        className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-48"
+                        className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-64"
                         placeholder={`Timer ${timer.id}`}
                       />
                     </div>

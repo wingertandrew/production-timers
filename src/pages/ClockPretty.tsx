@@ -17,6 +17,7 @@ interface ClockData {
   timers: SingleTimer[];
   activeTimerId: number | null;
   ntpOffset?: number;
+  clockPrettyHeader?: string;
 }
 
 const ClockPretty = () => {
@@ -34,7 +35,8 @@ const ClockPretty = () => {
       name: `Timer ${i + 1}`
     })),
     activeTimerId: 1,
-    ntpOffset: 0
+    ntpOffset: 0,
+    clockPrettyHeader: 'TIMER OVERVIEW'
   });
 
   useEffect(() => {
@@ -78,12 +80,6 @@ const ClockPretty = () => {
 
   const formatTime = (minutes: number, seconds: number) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatDuration = (totalSeconds: number) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const getElapsedPercentage = (timer: SingleTimer) => {
@@ -138,7 +134,9 @@ const ClockPretty = () => {
       <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-6xl font-bold text-white mb-4">TIMER OVERVIEW</h1>
+          <h1 className="text-6xl font-bold text-white mb-4">
+            {clockData.clockPrettyHeader || 'TIMER OVERVIEW'}
+          </h1>
           <div className="text-2xl text-gray-400">
             Active Timer: {clockData.activeTimerId}
           </div>
@@ -160,9 +158,9 @@ const ClockPretty = () => {
                   isActive ? 'border-blue-500' : 'border-gray-700'
                 } rounded-xl p-6 transition-all`}
               >
-                <div className="flex items-center gap-8">
+                <div className="flex items-center gap-8 h-32">
                   {/* Timer ID and Name */}
-                  <div className="min-w-[200px]">
+                  <div className="min-w-[200px] flex flex-col justify-center">
                     <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
                       {timer.name || `Timer ${timer.id}`}
                     </div>
@@ -171,15 +169,15 @@ const ClockPretty = () => {
                     </div>
                   </div>
 
-                  {/* Times - Elapsed and Remaining */}
-                  <div className="flex-1 flex justify-center gap-12 text-4xl font-mono">
+                  {/* Times - Elapsed and Remaining - 80% of vertical space */}
+                  <div className="flex-1 flex justify-center gap-12 items-center h-full">
                     <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-1">ELAPSED</div>
-                      <div className="text-green-400">+{elapsedTime}</div>
+                      <div className="text-sm text-gray-400 mb-2">ELAPSED</div>
+                      <div className="text-8xl font-mono text-green-400">+{elapsedTime}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-1">REMAINING</div>
-                      <div className="text-red-400">-{remainingTime}</div>
+                      <div className="text-sm text-gray-400 mb-2">REMAINING</div>
+                      <div className="text-8xl font-mono text-red-400">-{remainingTime}</div>
                     </div>
                   </div>
 
@@ -187,51 +185,18 @@ const ClockPretty = () => {
                   <div className="flex-1" />
                 </div>
 
-                {/* Progress Bar Below */}
+                {/* Progress Bar Below - with dynamic animation */}
                 <div className="mt-4">
                   <div className="w-full h-6 bg-gray-700 rounded">
                     <div
-                      className={`h-full rounded ${getProgressColor(timer)}`}
+                      className={`h-full rounded transition-all duration-1000 ease-linear ${getProgressColor(timer)}`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 </div>
-
-                {/* Additional Info - Pause Times */}
-                {timer.isPaused && (
-                  <div className="mt-4 text-center space-y-1">
-                    <div className="text-yellow-400 text-lg animate-pulse">
-                      Current Pause: {formatDuration(timer.currentPauseDuration)}
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
-        </div>
-
-        {/* Summary Stats */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-          <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-            <div className="text-xl text-gray-400 mb-2">RUNNING TIMERS</div>
-            <div className="text-4xl font-bold text-green-400">
-              {clockData.timers.filter(t => t.isRunning && !t.isPaused).length}
-            </div>
-          </div>
-          
-          <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-            <div className="text-xl text-gray-400 mb-2">PAUSED TIMERS</div>
-            <div className="text-4xl font-bold text-yellow-400">
-              {clockData.timers.filter(t => t.isPaused).length}
-            </div>
-          </div>
-          
-          <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-            <div className="text-xl text-gray-400 mb-2">STOPPED TIMERS</div>
-            <div className="text-4xl font-bold text-gray-400">
-              {clockData.timers.filter(t => !t.isRunning && !t.isPaused).length}
-            </div>
-          </div>
         </div>
       </div>
     </div>

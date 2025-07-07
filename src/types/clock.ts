@@ -22,6 +22,7 @@ export interface ClockState {
   masterClockStartTime?: number;
   ntpTimestamp?: number | null;
   serverTime?: number;
+  clockPrettyHeader?: string;
 }
 
 export interface DebugLogEntry {
