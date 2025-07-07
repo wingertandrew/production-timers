@@ -8,7 +8,6 @@ interface SingleTimer {
   isPaused: boolean;
   elapsedMinutes: number;
   elapsedSeconds: number;
-  totalPausedTime: number;
   currentPauseDuration: number;
   initialTime?: { minutes: number; seconds: number };
   name?: string;
@@ -30,7 +29,6 @@ const ClockPretty = () => {
       isPaused: false,
       elapsedMinutes: 0,
       elapsedSeconds: 0,
-      totalPausedTime: 0,
       currentPauseDuration: 0,
       initialTime: { minutes: 5, seconds: 0 },
       name: `Timer ${i + 1}`
@@ -195,18 +193,11 @@ const ClockPretty = () => {
                 </div>
 
                 {/* Additional Info - Pause Times */}
-                {(timer.isPaused || timer.totalPausedTime > 0) && (
+                {timer.isPaused && (
                   <div className="mt-4 text-center space-y-1">
-                    {timer.isPaused && (
-                      <div className="text-yellow-400 text-lg animate-pulse">
-                        Current Pause: {formatDuration(timer.currentPauseDuration)}
-                      </div>
-                    )}
-                    {timer.totalPausedTime > 0 && (
-                      <div className="text-yellow-300 text-sm">
-                        Total Paused: {formatDuration(timer.totalPausedTime)}
-                      </div>
-                    )}
+                    <div className="text-yellow-400 text-lg animate-pulse">
+                      Current Pause: {formatDuration(timer.currentPauseDuration)}
+                    </div>
                   </div>
                 )}
               </div>
