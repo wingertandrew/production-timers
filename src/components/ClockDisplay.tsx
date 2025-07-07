@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Play, Pause, RotateCcw, Plus, Minus, Wifi, WifiOff } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Play, Pause, RotateCcw, Plus, Minus, Wifi, WifiOff, Edit2 } from 'lucide-react';
 import HoldButton from './HoldButton';
 import FastAdjustButton from './FastAdjustButton';
 import { ClockState, NTPSyncStatus } from '@/types/clock';
@@ -15,6 +15,11 @@ interface ClockDisplayProps {
   onTogglePlayPause: () => void;
   onResetTime: () => void;
   onAdjustTimeBySeconds: (seconds: number) => void;
+  onStartTimer: (timerId: number) => void;
+  onPauseTimer: (timerId: number) => void;
+  onResetTimer: (timerId: number) => void;
+  onSetTimerTime: (timerId: number, minutes: number, seconds: number) => void;
+  onSetActiveTimer: (timerId: number) => void;
 }
 
 const ClockDisplay: React.FC<ClockDisplayProps> = ({
@@ -23,8 +28,17 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
   ntpSyncStatus,
   onTogglePlayPause,
   onResetTime,
-  onAdjustTimeBySeconds
+  onAdjustTimeBySeconds,
+  onStartTimer,
+  onPauseTimer,
+  onResetTimer,
+  onSetTimerTime,
+  onSetActiveTimer
 }) => {
+  const [editingTimer, setEditingTimer] = useState<number | null>(null);
+  const [editMinutes, setEditMinutes] = useState(0);
+  const [editSeconds, setEditSeconds] = useState(0);
+
   const getColorInfo = (timer: any) => {
     const remaining = timer.minutes * 60 + timer.seconds;
     if (remaining <= 10) {
@@ -40,42 +54,50 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
   };
 
   const getStatusText = (timer: any) => {
-    if (timer.isPaused) return 'PAUSED';
-    if (timer.isRunning) return 'RUNNING';
-    return 'STOPPED';
+    if (timer.isPaused) return 'P';
+    if (timer.isRunning) return 'R';
+    return 'S';
   };
 
-  const getProgressPercentage = (timer: any) => {
-    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
-    const remainingSeconds = timer.minutes * 60 + timer.seconds;
-    const elapsedSeconds = totalInitialSeconds - remainingSeconds;
-    return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
+  const startEdit = (timer: any) => {
+    setEditingTimer(timer.id);
+    setEditMinutes(timer.initialTime.minutes);
+    setEditSeconds(timer.initialTime.seconds);
   };
 
-  const activeTimer = clockState.timers.find(t => t.id === clockState.activeTimerId);
+  const saveEdit = () => {
+    if (editingTimer) {
+      onSetTimerTime(editingTimer, editMinutes, editSeconds);
+      setEditingTimer(null);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingTimer(null);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white p-4 overflow-hidden">
       <div className="h-screen flex flex-col max-w-[1920px] mx-auto">
         {/* Header with IP and NTP Status */}
-        <div className="flex justify-between items-center mb-4 h-12">
-          <div className="flex items-center gap-2 text-white text-lg">
+        <div className="flex justify-between items-center mb-6 h-12">
+          <div className="flex items-center gap-2 text-white text-xl">
             <div className="w-3 h-3 bg-white rounded-full"></div>
             <span>{ipAddress}</span>
           </div>
           
           {ntpSyncStatus.enabled && (
-            <div className="flex items-center gap-2 text-lg">
+            <div className="flex items-center gap-2 text-xl">
               {ntpSyncStatus.healthy ? (
-                <Wifi className="w-5 h-5 text-green-400" />
+                <Wifi className="w-6 h-6 text-green-400" />
               ) : (
-                <WifiOff className="w-5 h-5 text-red-400" />
+                <WifiOff className="w-6 h-6 text-red-400" />
               )}
               <span className={ntpSyncStatus.healthy ? 'text-green-400' : 'text-red-400'}>
                 NTP {ntpSyncStatus.healthy ? 'SYNC' : 'FAIL'}
               </span>
               {ntpSyncStatus.timeOffset !== 0 && (
-                <span className="text-yellow-400 text-sm">
+                <span className="text-yellow-400 text-lg">
                   {ntpSyncStatus.timeOffset > 0 ? '+' : ''}{ntpSyncStatus.timeOffset}ms
                 </span>
               )}
@@ -83,163 +105,177 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
           )}
         </div>
 
-        {/* All Timers Vertical Stack - Responsive Text */}
-        <div className="flex-1 flex flex-col justify-center gap-2 mb-8">
+        {/* All Timers Stack - Matching Floating Clock Style */}
+        <div className="flex-1 flex flex-col gap-1 mb-8">
           {clockState.timers.map((timer) => {
-            const progress = getProgressPercentage(timer);
-            const isActive = timer.id === clockState.activeTimerId;
             const colorInfo = getColorInfo(timer);
             const displayTime = formatTime(timer.minutes, timer.seconds);
-            const elapsedTime = formatTime(
-              timer.elapsedMinutes,
-              timer.elapsedSeconds
-            );
+            const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
+            const progress = timer.initialTime
+              ? ((timer.initialTime.minutes * 60 + timer.initialTime.seconds - (timer.minutes * 60 + timer.seconds)) /
+                 (timer.initialTime.minutes * 60 + timer.initialTime.seconds)) * 100
+              : 0;
+            const isActive = timer.id === clockState.activeTimerId;
+            const isEditing = editingTimer === timer.id;
             
             return (
-              <div
-                key={timer.id}
-                className={`bg-gray-900 rounded-xl p-4 border-2 transition-all ${
-                  isActive ? 'border-blue-500 bg-gray-800' : 'border-gray-700'
+              <div 
+                key={timer.id} 
+                className={`bg-gray-900 border-b-2 border-gray-700 cursor-pointer transition-all ${
+                  isActive ? 'bg-blue-900/30 border-blue-500/50' : 'hover:bg-gray-800'
                 }`}
+                onClick={() => onSetActiveTimer(timer.id)}
               >
-                <div className="flex items-center justify-between">
-                  {/* Timer ID - Small single number */}
-                  <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[60px]`}>
-                    {timer.id}
+                {/* Main Timer Row */}
+                <div className="px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    {/* Timer ID */}
+                    <div className={`text-4xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[80px]`}>
+                      {timer.id}
+                    </div>
+
+                    {/* Timer Display */}
+                    <div className="flex-1 text-center">
+                      <div
+                        className={`text-5xl font-mono font-bold ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
+                      >
+                        {displayTime}
+                      </div>
+                      <div className="flex justify-center gap-8 mt-2 text-2xl font-mono">
+                        <span className="text-green-400">+{elapsedTime}</span>
+                        <span className="text-red-400">-{displayTime}</span>
+                      </div>
+                    </div>
+
+                    {/* Status & Edit */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEdit(timer);
+                        }}
+                        className="rounded p-2 bg-gray-600 hover:bg-gray-500 text-white"
+                      >
+                        <Edit2 className="w-5 h-5" />
+                      </button>
+                      <div
+                        className="rounded px-4 py-2 min-w-[60px] text-center"
+                        style={{ backgroundColor: colorInfo.hex }}
+                      >
+                        <span className="text-black text-lg font-bold">{getStatusText(timer)}</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  {/* Timer Display with Elapsed/Remaining */}
-                  <div className="flex-1 text-center">
-                    <div
-                      className={`text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-mono font-bold tracking-wider ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
+
+                  {/* Progress Bar */}
+                  <div className="mt-4">
+                    <div className="w-full h-4 bg-gray-700 rounded">
+                      <div
+                        className="h-full rounded"
+                        style={{ width: `${progress}%`, backgroundColor: colorInfo.hex }}
+                      />
+                    </div>
+                    {timer.totalPausedTime > 0 && (
+                      <div className="text-center text-yellow-400 text-lg mt-2">
+                        Total Paused: {formatDuration(timer.totalPausedTime)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Timer Controls */}
+                <div className="px-6 pb-4">
+                  <div className="flex justify-center gap-4">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStartTimer(timer.id);
+                      }}
+                      disabled={timer.isRunning && !timer.isPaused}
+                      className="h-12 px-6 bg-green-600 hover:bg-green-500 text-white"
                     >
-                      {displayTime}
-                    </div>
-                    <div className="flex justify-center gap-6 mt-2 text-lg md:text-xl lg:text-2xl font-mono">
-                      <span className="text-green-400">+{elapsedTime}</span>
-                      <span className="text-red-400">-{displayTime}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Status - Smaller */}
-                  <div
-                    className={`rounded-lg p-2 min-w-[120px] ${
-                      timer.isRunning && !timer.isPaused && colorInfo.pulse
-                        ? 'urgent-pulse'
-                        : ''
-                    }`}
-                    style={{ backgroundColor: colorInfo.hex }}
-                  >
-                    <div className="flex items-center gap-2 text-black text-sm font-bold justify-center">
-                      {timer.isRunning && !timer.isPaused ? (
-                        <div className="w-0 h-0 border-l-[8px] border-l-black border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"></div>
-                      ) : timer.isPaused ? (
-                        <div className="flex gap-1">
-                          <div className="w-1.5 h-3 bg-black"></div>
-                          <div className="w-1.5 h-3 bg-black"></div>
-                        </div>
-                      ) : (
-                        <div className="w-3 h-3 bg-black"></div>
-                      )}
-                      <span>{getStatusText(timer)}</span>
-                      {timer.isPaused && (
-                        <div className="bg-black/20 rounded-full px-1.5 py-0.5 text-xs font-mono ml-1">
-                          {formatDuration(timer.currentPauseDuration)}
-                        </div>
-                      )}
-                    </div>
+                      <Play className="w-5 h-5 mr-2" />
+                      Start
+                    </Button>
+
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPauseTimer(timer.id);
+                      }}
+                      disabled={!timer.isRunning}
+                      className="h-12 px-6 bg-yellow-600 hover:bg-yellow-500 text-white"
+                    >
+                      <Pause className="w-5 h-5 mr-2" />
+                      {timer.isPaused ? 'Resume' : 'Pause'}
+                    </Button>
+
+                    <HoldButton
+                      onHoldComplete={() => onResetTimer(timer.id)}
+                      className="h-12 px-6 bg-red-600 hover:bg-red-500 text-white"
+                    >
+                      <RotateCcw className="w-5 h-5 mr-2" />
+                      Reset
+                    </HoldButton>
                   </div>
                 </div>
-                
-                {/* Progress Bar */}
-                <div className="mt-3">
-                  <Progress 
-                    value={progress} 
-                    className="h-3 bg-gray-700"
-                  />
-                  {timer.totalPausedTime > 0 && (
-                    <div className="text-center text-yellow-400 text-sm mt-2">
-                      Total Paused: {formatDuration(timer.totalPausedTime)}
+
+                {/* Time Edit Modal */}
+                {isEditing && (
+                  <div className="px-6 pb-4 border-t border-gray-600 pt-4">
+                    <div className="flex justify-center items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <label className="text-white">Minutes:</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="59"
+                          value={editMinutes}
+                          onChange={(e) => setEditMinutes(parseInt(e.target.value) || 0)}
+                          className="w-20 bg-gray-700 border-gray-500 text-white text-center"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-white">Seconds:</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="59"
+                          value={editSeconds}
+                          onChange={(e) => setEditSeconds(parseInt(e.target.value) || 0)}
+                          className="w-20 bg-gray-700 border-gray-500 text-white text-center"
+                        />
+                      </div>
+                      <Button
+                        onClick={saveEdit}
+                        className="bg-green-600 hover:bg-green-500 text-white"
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        onClick={cancelEdit}
+                        className="bg-gray-600 hover:bg-gray-500 text-white"
+                      >
+                        Cancel
+                      </Button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Control Buttons - Only for Active Timer */}
-        {activeTimer && (
-          <div className="flex justify-center gap-4 mb-4">
-            {/* Time Adjustment */}
-            <FastAdjustButton
-              onAdjust={(amount) => onAdjustTimeBySeconds(amount)}
-              adjustAmount={-1}
-              disabled={activeTimer.isRunning && !activeTimer.isPaused}
-              className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl text-2xl font-bold"
-            >
-              <Minus className="w-8 h-8" />
-            </FastAdjustButton>
-
-            <FastAdjustButton
-              onAdjust={(amount) => onAdjustTimeBySeconds(amount)}
-              adjustAmount={1}
-              disabled={activeTimer.isRunning && !activeTimer.isPaused}
-              className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl text-2xl font-bold"
-            >
-              <Plus className="w-8 h-8" />
-            </FastAdjustButton>
-
-            {/* Play/Pause Button */}
-            <Button
-              onClick={onTogglePlayPause}
-              className="h-16 w-32 bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
-            >
-              {activeTimer.isRunning && !activeTimer.isPaused ? (
-                <div className="flex gap-2">
-                  <div className="w-3 h-10 bg-black"></div>
-                  <div className="w-3 h-10 bg-black"></div>
-                </div>
-              ) : (
-                <div className="w-0 h-0 border-l-[20px] border-l-black border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-2"></div>
-              )}
-            </Button>
-
-            {/* Reset Button */}
-            <HoldButton
-              onHoldComplete={onResetTime}
-              className="h-16 w-16 bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
-            >
-              <RotateCcw className="w-8 h-8" />
-            </HoldButton>
-          </div>
-        )}
-
         {/* Footer Stats */}
-        <div className="flex justify-between items-center text-white text-lg h-8">
-          <div className="flex gap-6">
-            {activeTimer && (
-              <>
-                <div>
-                  Active: Timer {activeTimer.id}
-                </div>
-                <div>
-                  Elapsed: {formatTime(activeTimer.elapsedMinutes, activeTimer.elapsedSeconds)}
-                </div>
-                {activeTimer.totalPausedTime > 0 && (
-                  <div className="text-yellow-400">
-                    Total Paused: {formatDuration(activeTimer.totalPausedTime)}
-                  </div>
-                )}
-              </>
+        <div className="flex justify-between items-center text-white text-xl h-8">
+          <div className="flex gap-8">
+            <div>Active: Timer {clockState.activeTimerId}</div>
+            {ntpSyncStatus.enabled && ntpSyncStatus.syncCount > 0 && (
+              <div className="text-blue-400">
+                NTP Syncs: {ntpSyncStatus.syncCount} | Errors: {ntpSyncStatus.errorCount}
+              </div>
             )}
           </div>
-          
-          {ntpSyncStatus.enabled && ntpSyncStatus.syncCount > 0 && (
-            <div className="text-blue-400">
-              NTP Syncs: {ntpSyncStatus.syncCount} | Errors: {ntpSyncStatus.errorCount}
-            </div>
-          )}
         </div>
       </div>
     </div>

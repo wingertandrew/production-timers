@@ -6,7 +6,6 @@ import { ClockState, SingleTimer, NTPSyncStatus } from '@/types/clock';
 import { useDebugLog } from '@/hooks/useDebugLog';
 import { NTPSyncManager, DEFAULT_NTP_CONFIG } from '@/utils/ntpSync';
 
-import TimerCard from './TimerCard';
 import ClockDisplay from './ClockDisplay';
 import SettingsTab from './SettingsTab';
 import InfoTab from './InfoTab';
@@ -261,7 +260,7 @@ const CountdownClock = () => {
 
   const adjustTimeBySeconds = async (timerId: number, secondsToAdd: number) => {
     const timer = clockState.timers.find(t => t.id === timerId);
-    if (!timer || (timer.isRunning && !timer.isPaused)) return;
+    if (!timer) return;
     
     try {
       const response = await fetch(`/api/timer/${timerId}/adjust-time`, {
@@ -331,9 +330,8 @@ const CountdownClock = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
-        <TabsList className="grid w-full grid-cols-5 mb-0 bg-gray-800 border-gray-700">
+        <TabsList className="grid w-full grid-cols-4 mb-0 bg-gray-800 border-gray-700">
           <TabsTrigger value="clock" className="text-lg py-3 data-[state=active]:bg-gray-600">Display</TabsTrigger>
-          <TabsTrigger value="timers" className="text-lg py-3 data-[state=active]:bg-gray-600">Timers</TabsTrigger>
           <TabsTrigger value="settings" className="text-lg py-3 data-[state=active]:bg-gray-600">
             <Settings className="w-5 h-5 mr-2" />
             Settings
@@ -348,7 +346,7 @@ const CountdownClock = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Show FloatingClock bar on non-clock tabs - positioned between nav and content */}
+        {/* Show FloatingClock bar on non-clock tabs - positioned at top */}
         {activeTab !== 'clock' && (
           <FloatingClock 
             clockState={clockState}
@@ -364,27 +362,15 @@ const CountdownClock = () => {
             onTogglePlayPause={() => pauseTimer(clockState.activeTimerId || 1)}
             onResetTime={() => resetTimer(clockState.activeTimerId || 1)}
             onAdjustTimeBySeconds={(seconds) => adjustTimeBySeconds(clockState.activeTimerId || 1, seconds)}
+            onStartTimer={startTimer}
+            onPauseTimer={pauseTimer}
+            onResetTimer={resetTimer}
+            onSetTimerTime={setTimerTime}
+            onSetActiveTimer={(id) => setClockState(prev => ({ ...prev, activeTimerId: id }))}
           />
         </TabsContent>
 
-        <TabsContent value="timers" className="pt-0">
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {clockState.timers.map((timer) => (
-              <TimerCard
-                key={timer.id}
-                timer={timer}
-                isActive={timer.id === clockState.activeTimerId}
-                onStart={startTimer}
-                onPause={pauseTimer}
-                onReset={resetTimer}
-                onAdjustTime={adjustTimeBySeconds}
-                onSetActive={(id) => setClockState(prev => ({ ...prev, activeTimerId: id }))}
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="settings" className="pt-0">
+        <TabsContent value="settings" className={`pt-0 ${activeTab !== 'clock' ? 'mt-[140px]' : ''}`}>
           <div className="p-6">
             <SettingsTab
               clockState={clockState}
@@ -400,7 +386,7 @@ const CountdownClock = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="api" className="pt-0">
+        <TabsContent value="api" className={`pt-0 ${activeTab !== 'clock' ? 'mt-[140px]' : ''}`}>
           <div className="p-6">
             <ApiInfoTab
               ipAddress={ipAddress}
@@ -409,7 +395,7 @@ const CountdownClock = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="debug" className="pt-0">
+        <TabsContent value="debug" className={`pt-0 ${activeTab !== 'clock' ? 'mt-[140px]' : ''}`}>
           <div className="p-6">
             <DebugTab
               {...debugLogProps}
