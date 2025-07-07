@@ -40,6 +40,21 @@ const ClockPretty = () => {
     clockPrettyHeader: 'TIMER OVERVIEW'
   });
 
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const scaleX = window.innerWidth / 1920;
+      const scaleY = window.innerHeight / 1080;
+      const newScale = Math.min(scaleX, scaleY, 1);
+      setScale(newScale);
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
+
   useEffect(() => {
     // Connect to WebSocket for real-time updates
     const connectWebSocket = () => {
@@ -130,21 +145,17 @@ const ClockPretty = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden" style={{ 
-      width: '100vw', 
-      height: '100vh',
-      transform: 'scale(1)',
-      transformOrigin: 'top left'
-    }}>
-      <style jsx>{`
-        @media (max-width: 1920px) {
+    <div className="min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+      <style>
+        {`
           .clock-pretty-container {
-            transform: scale(${Math.min(window.innerWidth / 1920, window.innerHeight / 1080)});
+            transform: scale(${scale});
+            transform-origin: center center;
           }
-        }
-      `}</style>
+        `}
+      </style>
       
-      <div className="clock-pretty-container w-full h-full" style={{ width: '1920px', height: '1080px' }}>
+      <div className="clock-pretty-container" style={{ width: '1920px', height: '1080px' }}>
         <div className="max-w-7xl mx-auto p-8 h-full flex flex-col">
           {/* Header */}
           <div className="text-center mb-12 flex-shrink-0">
@@ -203,10 +214,11 @@ const ClockPretty = () => {
                   <div className="mt-4">
                     <div className="w-full h-6 bg-gray-700 rounded overflow-hidden">
                       <div
-                        className={`h-full rounded transition-all duration-1000 ease-linear ${getProgressColor(timer)}`}
+                        className={`h-full rounded transition-all ${getProgressColor(timer)}`}
                         style={{ 
                           width: `${progress}%`,
-                          transition: timer.isRunning && !timer.isPaused ? 'width 1s linear' : 'width 0.3s ease-out'
+                          transitionDuration: timer.isRunning && !timer.isPaused ? '1000ms' : '300ms',
+                          transitionTimingFunction: timer.isRunning && !timer.isPaused ? 'linear' : 'ease-out'
                         }}
                       />
                     </div>
