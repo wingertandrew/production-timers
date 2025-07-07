@@ -296,18 +296,25 @@ const CountdownClock = () => {
   };
 
   const setTimerName = async (timerId: number, name: string) => {
+    setClockState(prev => ({
+      ...prev,
+      timers: prev.timers.map(t =>
+        t.id === timerId ? { ...t, name } : t
+      )
+    }));
+
     try {
       const response = await fetch(`/api/timer/${timerId}/set-name`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
       });
-      
+
       if (response.ok) {
         addDebugLog('UI', `Timer ${timerId} name set via API`, { name });
       }
     } catch (error) {
-      addDebugLog('UI', `Failed to set timer ${timerId} name`, { error: error.message });
+      addDebugLog('UI', `Failed to set timer ${timerId} name`, { error: (error as Error).message });
     }
   };
 

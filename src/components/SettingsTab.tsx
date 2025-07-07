@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,11 +31,34 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   onSetTimerName,
   onApplyNtpSettings
 }) => {
+  const [nameValues, setNameValues] = useState<Record<number, string>>(() => {
+    const vals: Record<number, string> = {};
+    clockState.timers.forEach(t => {
+      vals[t.id] = t.name || `Timer ${t.id}`;
+    });
+    return vals;
+  });
+
+  useEffect(() => {
+    setNameValues(prev => {
+      const vals = { ...prev };
+      clockState.timers.forEach(t => {
+        vals[t.id] = prev[t.id] ?? (t.name || `Timer ${t.id}`);
+      });
+      return vals;
+    });
+  }, [clockState.timers]);
+
   const handleTimerTimeChange = (timerId: number, minutes: number, seconds: number) => {
     onSetTimerTime(timerId, minutes, seconds);
   };
 
-  const handleTimerNameChange = (timerId: number, name: string) => {
+  const handleTimerNameChange = (timerId: number, value: string) => {
+    setNameValues(prev => ({ ...prev, [timerId]: value }));
+  };
+
+  const commitTimerName = (timerId: number) => {
+    const name = nameValues[timerId] ?? `Timer ${timerId}`;
     onSetTimerName(timerId, name);
   };
 
@@ -64,8 +87,15 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                       <label className="text-white text-sm mb-1">Timer Name</label>
                       <Input
                         type="text"
-                        value={timer.name || `Timer ${timer.id}`}
+                        value={nameValues[timer.id] ?? timer.name ?? `Timer ${timer.id}`}
                         onChange={(e) => handleTimerNameChange(timer.id, e.target.value)}
+                        onBlur={() => commitTimerName(timer.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            commitTimerName(timer.id);
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
                         className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-48"
                         placeholder={`Timer ${timer.id}`}
                       />
