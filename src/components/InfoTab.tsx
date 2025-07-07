@@ -39,7 +39,7 @@ const InfoTab: React.FC = () => (
             <li><strong>Reset Rounds</strong> – Return to round 1 and restore the starting time. This is equivalent to a full reset of the match.</li>
             <li><strong>Next Round</strong> – Immediately advance to the next round. The timer resets to the initial time for that round.</li>
             <li><strong>Previous Round</strong> – Move back one round and reset the timer to the starting time.</li>
-            <li><strong>Adjust Time</strong> – While stopped or paused, officials may add or subtract seconds from the timer.</li>
+            <li><strong>Adjust Time</strong> – Officials may add or subtract seconds even while the timer is running.</li>
           </ul>
         </section>
         <section>

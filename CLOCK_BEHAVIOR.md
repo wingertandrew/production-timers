@@ -30,7 +30,7 @@ All state changes are broadcast to every connected display via WebSocket so that
 - **Reset Rounds** – Return to round 1 and restore the starting time. This is equivalent to a full reset of the match.
 - **Next Round** – Immediately advance to the next round. The timer resets to the initial time for that round.
 - **Previous Round** – Move back one round and reset the timer to the starting time.
-- **Adjust Time** – While stopped or paused, officials may add or subtract seconds from the timer.
+- **Adjust Time** – Officials may add or subtract seconds even while the timer is running.
 
 ## Between Rounds Behavior
 

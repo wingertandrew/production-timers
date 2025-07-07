@@ -150,6 +150,15 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                   <code className="text-2xl text-purple-300 font-bold">POST /api/set-ntp-sync</code>
                   <p className="text-gray-300 mt-2">Configure NTP synchronization settings</p>
                 </div>
+                <div className="bg-gray-700 p-6 rounded-xl flex justify-between items-center">
+                  <div>
+                    <code className="text-2xl text-blue-300 font-bold">POST /api/set-port</code>
+                    <p className="text-gray-300 mt-2">Change the server's HTTP port</p>
+                  </div>
+                  <Button variant="ghost" size="lg" onClick={() => handleCopyCommand('/api/set-port')} className="h-16 w-16">
+                    <Copy className="w-8 h-8 text-white" />
+                  </Button>
+                </div>
               </div>
             </div>
 
