@@ -15,7 +15,7 @@ import DebugTab from './DebugTab';
 const CountdownClock = () => {
   const createInitialTimer = (id: number): SingleTimer => ({
     id,
-    minutes: 5,
+    minutes: 1,
     seconds: 0,
     isRunning: false,
     isPaused: false,
@@ -24,7 +24,7 @@ const CountdownClock = () => {
     pauseStartTime: null,
     totalPausedTime: 0,
     currentPauseDuration: 0,
-    initialTime: { minutes: 5, seconds: 0 }
+    initialTime: { minutes: 1, seconds: 0 }
   });
 
   const [clockState, setClockState] = useState<ClockState>({

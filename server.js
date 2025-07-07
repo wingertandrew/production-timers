@@ -18,7 +18,7 @@ const wss = new WebSocketServer({ server });
 // Server-side timer state
 const createInitialTimer = (id) => ({
   id,
-  minutes: 5,
+  minutes: 1,
   seconds: 0,
   isRunning: false,
   isPaused: false,
@@ -27,8 +27,8 @@ const createInitialTimer = (id) => ({
   pauseStartTime: null,
   totalPausedTime: 0,
   currentPauseDuration: 0,
-  initialTime: { minutes: 5, seconds: 0 },
-  startTime: { minutes: 5, seconds: 0 },
+  initialTime: { minutes: 1, seconds: 0 },
+  startTime: { minutes: 1, seconds: 0 },
   lastUpdateTime: Date.now()
 });
 

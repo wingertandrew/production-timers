@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Play, Pause, RotateCcw, Wifi, WifiOff, Edit2 } from 'lucide-react';
-import HoldButton from './HoldButton';
 import { ClockState, NTPSyncStatus } from '@/types/clock';
 import { formatTime, formatDuration } from '@/utils/clockUtils';
 
@@ -157,7 +156,6 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                       {/* Times Line */}
                       <div className="flex justify-center gap-8 mt-2 text-5xl font-mono">
                         <span className="text-green-400">+{elapsedTime}</span>
-                        <span className={`font-bold ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}>{displayTime}</span>
                         <span className="text-red-400">-{displayTime}</span>
                       </div>
 
@@ -203,13 +201,16 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                           {timer.isPaused ? 'Resume' : 'Pause'}
                         </Button>
                       </div>
-                      <HoldButton
-                        onHoldComplete={() => onResetTimer(timer.id)}
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onResetTimer(timer.id);
+                        }}
                         className="h-10 px-4 bg-red-600 hover:bg-red-500 text-white"
                       >
                         <RotateCcw className="w-5 h-5 mr-1" />
                         Reset
-                      </HoldButton>
+                      </Button>
                       <div className="flex gap-2">
                         <Button
                           onClick={(e) => {
@@ -260,6 +261,10 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                           onChange={(e) => setEditMinutes(parseInt(e.target.value) || 0)}
                           className="w-20 bg-gray-700 border-gray-500 text-white text-center"
                         />
+                        <div className="flex flex-col ml-2 gap-1">
+                          <Button size="sm" className="h-6 px-2" onClick={() => setEditMinutes(Math.min(59, editMinutes + 1))}>+</Button>
+                          <Button size="sm" className="h-6 px-2" onClick={() => setEditMinutes(Math.max(0, editMinutes - 1))}>-</Button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-white">Seconds:</label>
@@ -271,6 +276,10 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                           onChange={(e) => setEditSeconds(parseInt(e.target.value) || 0)}
                           className="w-20 bg-gray-700 border-gray-500 text-white text-center"
                         />
+                        <div className="flex flex-col ml-2 gap-1">
+                          <Button size="sm" className="h-6 px-2" onClick={() => setEditSeconds(Math.min(59, editSeconds + 1))}>+</Button>
+                          <Button size="sm" className="h-6 px-2" onClick={() => setEditSeconds(Math.max(0, editSeconds - 1))}>-</Button>
+                        </div>
                       </div>
                       <Button
                         onClick={saveEdit}
