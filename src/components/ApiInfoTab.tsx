@@ -110,6 +110,15 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                       <Copy className="w-6 h-6 text-white" />
                     </Button>
                   </div>
+                  <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                      <code className="text-lg text-purple-300 font-bold">POST /api/timer/{'{id}'}/set-name</code>
+                      <p className="text-gray-300 text-sm mt-1">Update timer <code>{'{id}'}</code> name</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCopyCommand('/api/timer/{id}/set-name')} className="h-12 w-12">
+                      <Copy className="w-6 h-6 text-white" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-gray-300 text-sm mt-3">Replace <code>{'{id}'}</code> with the timer number (1-5).</p>
               </div>

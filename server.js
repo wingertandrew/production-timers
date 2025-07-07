@@ -29,7 +29,8 @@ const createInitialTimer = (id) => ({
   currentPauseDuration: 0,
   initialTime: { minutes: 1, seconds: 0 },
   startTime: { minutes: 1, seconds: 0 },
-  lastUpdateTime: Date.now()
+  lastUpdateTime: Date.now(),
+  name: `Timer ${id}`
 });
 
 let serverClockState = {
@@ -484,6 +485,22 @@ app.post('/api/timer/:id/set-time', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/timer/:id/set-name', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+  const { name } = req.body;
+
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+
+  console.log(`API: Set timer ${timerId} name`);
+  timer.name = typeof name === 'string' ? name : '';
+  broadcast({ action: 'set-name', timerId, name: timer.name });
+  broadcast({ type: 'status', ...serverClockState });
+  res.json({ success: true });
+});
+
 // Legacy API endpoints (for compatibility)
 app.post('/api/start', (req, res) => {
   const timerId = serverClockState.activeTimerId || 1;
@@ -605,6 +622,10 @@ app.get('/api/docs', (req, res) => {
         "POST /api/timer/:id/set-time": {
           description: "Set specific timer duration",
           body: { minutes: "number", seconds: "number" }
+        },
+        "POST /api/timer/:id/set-name": {
+          description: "Set specific timer name",
+          body: { name: "string" }
         }
       },
       legacy_control: {
@@ -639,7 +660,8 @@ app.get('/api/docs', (req, res) => {
       pause_timer_2: `curl -X POST http://${req.get('host')}/api/timer/2/pause`,
       reset_timer_3: `curl -X POST http://${req.get('host')}/api/timer/3/reset`,
       set_timer_4_time: `curl -X POST http://${req.get('host')}/api/timer/4/set-time -H "Content-Type: application/json" -d '{"minutes":10,"seconds":0}'`,
-      adjust_timer_5: `curl -X POST http://${req.get('host')}/api/timer/5/adjust-time -H "Content-Type: application/json" -d '{"seconds":30}'`
+      adjust_timer_5: `curl -X POST http://${req.get('host')}/api/timer/5/adjust-time -H "Content-Type: application/json" -d '{"seconds":30}'`,
+      set_timer_1_name: `curl -X POST http://${req.get('host')}/api/timer/1/set-name -H "Content-Type: application/json" -d '{"name":"Intro"}'`
     }
   });
 });
