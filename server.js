@@ -25,7 +25,6 @@ const createInitialTimer = (id) => ({
   elapsedMinutes: 0,
   elapsedSeconds: 0,
   pauseStartTime: null,
-  totalPausedTime: 0,
   currentPauseDuration: 0,
   initialTime: { minutes: 1, seconds: 0 },
   startTime: { minutes: 1, seconds: 0 },
@@ -354,9 +353,7 @@ app.post('/api/timer/:id/start', (req, res) => {
     };
   }
   if (timer.isPaused && timer.pauseStartTime) {
-    timer.totalPausedTime += Math.floor(
-      (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
-    );
+    timer.currentPauseDuration = 0;
   }
   timer.isRunning = true;
   timer.isPaused = false;
@@ -381,9 +378,7 @@ app.post('/api/timer/:id/pause', (req, res) => {
   if (timer.isPaused) {
     // Resume
     if (timer.pauseStartTime) {
-      timer.totalPausedTime += Math.floor(
-        (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
-      );
+      timer.currentPauseDuration = 0;
     }
     timer.isPaused = false;
     timer.pauseStartTime = null;
@@ -416,7 +411,6 @@ app.post('/api/timer/:id/reset', (req, res) => {
   timer.elapsedMinutes = 0;
   timer.elapsedSeconds = 0;
   timer.pauseStartTime = null;
-  timer.totalPausedTime = 0;
   timer.currentPauseDuration = 0;
   timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
   
@@ -474,7 +468,6 @@ app.post('/api/timer/:id/set-time', (req, res) => {
   timer.elapsedSeconds = 0;
   timer.isRunning = false;
   timer.isPaused = false;
-  timer.totalPausedTime = 0;
   timer.currentPauseDuration = 0;
   timer.pauseStartTime = null;
   
@@ -508,7 +501,6 @@ app.post('/api/reset', (req, res) => {
     timer.elapsedMinutes = 0;
     timer.elapsedSeconds = 0;
     timer.pauseStartTime = null;
-    timer.totalPausedTime = 0;
     timer.currentPauseDuration = 0;
     timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
     stopServerTimer(timer.id);

@@ -7,7 +7,6 @@ export interface SingleTimer {
   elapsedMinutes: number;
   elapsedSeconds: number;
   pauseStartTime: number | null;
-  totalPausedTime: number;
   currentPauseDuration: number;
   initialTime: { minutes: number; seconds: number };
   name?: string;

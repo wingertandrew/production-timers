@@ -152,7 +152,6 @@ Each of the 5 timers maintains:
 - Current time (minutes:seconds)
 - Running/paused/stopped status
 - Elapsed time tracking
-- Total pause duration
 - Initial time configuration
 - Individual timer identification (1-5)
 
@@ -169,7 +168,6 @@ Each of the 5 timers maintains:
       "isPaused": false,
       "elapsedMinutes": 2,
       "elapsedSeconds": 15,
-      "totalPausedTime": 30,
       "currentPauseDuration": 0,
       "initialTime": { "minutes": 8, "seconds": 0 }
     },
@@ -181,7 +179,6 @@ Each of the 5 timers maintains:
       "isPaused": false,
       "elapsedMinutes": 0,
       "elapsedSeconds": 0,
-      "totalPausedTime": 0,
       "currentPauseDuration": 0,
       "initialTime": { "minutes": 5, "seconds": 0 }
     }

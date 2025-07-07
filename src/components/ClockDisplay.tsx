@@ -232,11 +232,6 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                         }}
                       />
                     </div>
-                    {timer.totalPausedTime > 0 && (
-                      <div className="text-center text-yellow-400 text-lg mt-2">
-                        Total Paused: {formatDuration(timer.totalPausedTime)}
-                      </div>
-                    )}
                   </div>
                 </div>
 

@@ -22,7 +22,6 @@ const CountdownClock = () => {
     elapsedMinutes: 0,
     elapsedSeconds: 0,
     pauseStartTime: null,
-    totalPausedTime: 0,
     currentPauseDuration: 0,
     initialTime: { minutes: 1, seconds: 0 },
     name: `Timer ${id}`
