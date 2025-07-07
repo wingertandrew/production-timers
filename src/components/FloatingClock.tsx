@@ -30,7 +30,7 @@ const FloatingClock: React.FC<FloatingClockProps> = ({ clockState, ntpSyncStatus
   };
 
   return (
-    <div className="fixed top-0 left-0 z-50 w-full bg-black border-b-2 border-gray-600 shadow-lg">
+    <div className="w-full bg-black border-b-2 border-gray-600 shadow-lg z-40">
       <div className="flex flex-col w-full">
         {/* Header */}
         <div className="bg-gray-800 px-3 py-2 border-b border-gray-600">

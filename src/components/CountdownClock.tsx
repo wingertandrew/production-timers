@@ -348,7 +348,7 @@ const CountdownClock = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Show FloatingClock bar on non-clock tabs */}
+        {/* Show FloatingClock bar on non-clock tabs - positioned between nav and content */}
         {activeTab !== 'clock' && (
           <FloatingClock 
             clockState={clockState}
@@ -367,8 +367,8 @@ const CountdownClock = () => {
           />
         </TabsContent>
 
-        <TabsContent value="timers" className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <TabsContent value="timers" className="pt-0">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {clockState.timers.map((timer) => (
               <TimerCard
                 key={timer.id}
@@ -384,34 +384,40 @@ const CountdownClock = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="settings">
-          <SettingsTab
-            clockState={clockState}
-            ntpSyncEnabled={ntpSyncEnabled}
-            ntpSyncInterval={ntpSyncInterval}
-            ntpDriftThreshold={ntpDriftThreshold}
-            setNtpSyncEnabled={setNtpSyncEnabled}
-            setNtpSyncInterval={setNtpSyncInterval}
-            setNtpDriftThreshold={setNtpDriftThreshold}
-            onSetTimerTime={setTimerTime}
-            onApplyNtpSettings={applyNtpSettings}
-          />
+        <TabsContent value="settings" className="pt-0">
+          <div className="p-6">
+            <SettingsTab
+              clockState={clockState}
+              ntpSyncEnabled={ntpSyncEnabled}
+              ntpSyncInterval={ntpSyncInterval}
+              ntpDriftThreshold={ntpDriftThreshold}
+              setNtpSyncEnabled={setNtpSyncEnabled}
+              setNtpSyncInterval={setNtpSyncInterval}
+              setNtpDriftThreshold={setNtpDriftThreshold}
+              onSetTimerTime={setTimerTime}
+              onApplyNtpSettings={applyNtpSettings}
+            />
+          </div>
         </TabsContent>
 
-        <TabsContent value="api">
-          <ApiInfoTab
-            ipAddress={ipAddress}
-            onCommandCopy={handleCommandCopy}
-          />
+        <TabsContent value="api" className="pt-0">
+          <div className="p-6">
+            <ApiInfoTab
+              ipAddress={ipAddress}
+              onCommandCopy={handleCommandCopy}
+            />
+          </div>
         </TabsContent>
 
-        <TabsContent value="debug">
-          <DebugTab
-            {...debugLogProps}
-            onClearDebugLog={debugLogProps.clearDebugLog}
-            connectedClients={connectedClients}
-            ntpSyncStatus={ntpSyncStatus}
-          />
+        <TabsContent value="debug" className="pt-0">
+          <div className="p-6">
+            <DebugTab
+              {...debugLogProps}
+              onClearDebugLog={debugLogProps.clearDebugLog}
+              connectedClients={connectedClients}
+              ntpSyncStatus={ntpSyncStatus}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
