@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Pause, RotateCcw, Plus, Minus, Wifi, WifiOff, Edit2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Wifi, WifiOff, Edit2 } from 'lucide-react';
 import HoldButton from './HoldButton';
-import FastAdjustButton from './FastAdjustButton';
 import { ClockState, NTPSyncStatus } from '@/types/clock';
 import { formatTime, formatDuration } from '@/utils/clockUtils';
 
@@ -119,104 +118,131 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
             const isEditing = editingTimer === timer.id;
             
             return (
-              <div 
-                key={timer.id} 
+              <div
+                key={timer.id}
                 className={`bg-gray-900 border-b-2 border-gray-700 cursor-pointer transition-all ${
                   isActive ? 'bg-blue-900/30 border-blue-500/50' : 'hover:bg-gray-800'
                 }`}
                 onClick={() => onSetActiveTimer(timer.id)}
               >
-                {/* Main Timer Row */}
                 <div className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    {/* Timer ID */}
-                    <div className={`text-4xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[80px]`}>
-                      {timer.id}
-                    </div>
+                  <div className="flex gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        {/* Timer ID */}
+                        <div className={`text-4xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[80px]`}>
+                          {timer.id}
+                        </div>
 
-                    {/* Timer Display */}
-                    <div className="flex-1 text-center">
-                      <div
-                        className={`text-5xl font-mono font-bold ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
-                      >
-                        {displayTime}
+                        {/* Status & Edit */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEdit(timer);
+                            }}
+                            className="rounded p-2 bg-gray-600 hover:bg-gray-500 text-white"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <div
+                            className="rounded px-4 py-2 min-w-[60px] text-center"
+                            style={{ backgroundColor: colorInfo.hex }}
+                          >
+                            <span className="text-black text-lg font-bold">{getStatusText(timer)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-center gap-8 mt-2 text-2xl font-mono">
+
+                      {/* Times Line */}
+                      <div className="flex justify-center gap-8 mt-2 text-5xl font-mono">
                         <span className="text-green-400">+{elapsedTime}</span>
+                        <span className={`font-bold ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}>{displayTime}</span>
                         <span className="text-red-400">-{displayTime}</span>
                       </div>
-                    </div>
 
-                    {/* Status & Edit */}
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEdit(timer);
-                        }}
-                        className="rounded p-2 bg-gray-600 hover:bg-gray-500 text-white"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                      <div
-                        className="rounded px-4 py-2 min-w-[60px] text-center"
-                        style={{ backgroundColor: colorInfo.hex }}
-                      >
-                        <span className="text-black text-lg font-bold">{getStatusText(timer)}</span>
+                      {/* Progress Bar */}
+                      <div className="mt-4">
+                        <div className="w-full h-6 bg-gray-700 rounded">
+                          <div
+                            className="h-full rounded"
+                            style={{ width: `${progress}%`, backgroundColor: colorInfo.hex }}
+                          />
+                        </div>
+                        {timer.totalPausedTime > 0 && (
+                          <div className="text-center text-yellow-400 text-lg mt-2">
+                            Total Paused: {formatDuration(timer.totalPausedTime)}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Progress Bar */}
-                  <div className="mt-4">
-                    <div className="w-full h-4 bg-gray-700 rounded">
-                      <div
-                        className="h-full rounded"
-                        style={{ width: `${progress}%`, backgroundColor: colorInfo.hex }}
-                      />
-                    </div>
-                    {timer.totalPausedTime > 0 && (
-                      <div className="text-center text-yellow-400 text-lg mt-2">
-                        Total Paused: {formatDuration(timer.totalPausedTime)}
+                    {/* Control Buttons */}
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStartTimer(timer.id);
+                          }}
+                          disabled={timer.isRunning && !timer.isPaused}
+                          className="h-10 px-4 bg-green-600 hover:bg-green-500 text-white"
+                        >
+                          <Play className="w-5 h-5 mr-1" />
+                          Start
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPauseTimer(timer.id);
+                          }}
+                          disabled={!timer.isRunning}
+                          className="h-10 px-4 bg-yellow-600 hover:bg-yellow-500 text-white"
+                        >
+                          <Pause className="w-5 h-5 mr-1" />
+                          {timer.isPaused ? 'Resume' : 'Pause'}
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Timer Controls */}
-                <div className="px-6 pb-4">
-                  <div className="flex justify-center gap-4">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStartTimer(timer.id);
-                      }}
-                      disabled={timer.isRunning && !timer.isPaused}
-                      className="h-12 px-6 bg-green-600 hover:bg-green-500 text-white"
-                    >
-                      <Play className="w-5 h-5 mr-2" />
-                      Start
-                    </Button>
-
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPauseTimer(timer.id);
-                      }}
-                      disabled={!timer.isRunning}
-                      className="h-12 px-6 bg-yellow-600 hover:bg-yellow-500 text-white"
-                    >
-                      <Pause className="w-5 h-5 mr-2" />
-                      {timer.isPaused ? 'Resume' : 'Pause'}
-                    </Button>
-
-                    <HoldButton
-                      onHoldComplete={() => onResetTimer(timer.id)}
-                      className="h-12 px-6 bg-red-600 hover:bg-red-500 text-white"
-                    >
-                      <RotateCcw className="w-5 h-5 mr-2" />
-                      Reset
-                    </HoldButton>
+                      <HoldButton
+                        onHoldComplete={() => onResetTimer(timer.id)}
+                        className="h-10 px-4 bg-red-600 hover:bg-red-500 text-white"
+                      >
+                        <RotateCcw className="w-5 h-5 mr-1" />
+                        Reset
+                      </HoldButton>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAdjustTimeBySeconds(1);
+                          }}
+                          disabled={timer.isRunning && !timer.isPaused}
+                          className="h-8 px-2 bg-gray-600 hover:bg-gray-500 text-white"
+                        >
+                          +1s
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAdjustTimeBySeconds(5);
+                          }}
+                          disabled={timer.isRunning && !timer.isPaused}
+                          className="h-8 px-2 bg-gray-600 hover:bg-gray-500 text-white"
+                        >
+                          +5s
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAdjustTimeBySeconds(15);
+                          }}
+                          disabled={timer.isRunning && !timer.isPaused}
+                          className="h-8 px-2 bg-gray-600 hover:bg-gray-500 text-white"
+                        >
+                          +15s
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

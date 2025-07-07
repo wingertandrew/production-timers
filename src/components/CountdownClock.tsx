@@ -11,7 +11,6 @@ import SettingsTab from './SettingsTab';
 import InfoTab from './InfoTab';
 import ApiInfoTab from './ApiInfoTab';
 import DebugTab from './DebugTab';
-import FloatingClock from './FloatingClock';
 
 const CountdownClock = () => {
   const createInitialTimer = (id: number): SingleTimer => ({
@@ -346,13 +345,7 @@ const CountdownClock = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Show FloatingClock bar on non-clock tabs - positioned at top */}
-        {activeTab !== 'clock' && (
-          <FloatingClock 
-            clockState={clockState}
-            ntpSyncStatus={ntpSyncStatus}
-          />
-        )}
+
 
         <TabsContent value="clock" className="p-0 m-0 h-screen">
           <ClockDisplay
