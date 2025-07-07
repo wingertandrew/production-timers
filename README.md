@@ -41,6 +41,7 @@ Complete REST API for external timer control with discrete timer support:
 #### System Operations
 - `GET /api/status` - Get current state of all timers
 - `POST /api/set-ntp-sync` - Configure NTP synchronization
+- `POST /api/set-port` - Change server port
 - `GET /api/docs` - Complete API documentation
 
 ### Time Synchronization
@@ -128,6 +129,13 @@ curl -X POST http://localhost:8080/api/reset
 Get complete API documentation:
 ```bash
 curl http://localhost:8080/api/docs
+```
+
+Change the server port:
+```bash
+curl -X POST http://localhost:8080/api/set-port \
+  -H "Content-Type: application/json" \
+  -d '{"port": 8081}'
 ```
 
 ## Installation
