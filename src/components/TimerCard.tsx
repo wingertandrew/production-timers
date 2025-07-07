@@ -77,7 +77,6 @@ const TimerCard: React.FC<TimerCardProps> = ({
               e.stopPropagation();
               onAdjustTime(timer.id, -10);
             }}
-            disabled={timer.isRunning && !timer.isPaused}
             className="bg-gray-800 border-gray-600 hover:bg-gray-700"
           >
             <Minus className="w-3 h-3" />
@@ -90,7 +89,6 @@ const TimerCard: React.FC<TimerCardProps> = ({
               e.stopPropagation();
               onAdjustTime(timer.id, 10);
             }}
-            disabled={timer.isRunning && !timer.isPaused}
             className="bg-gray-800 border-gray-600 hover:bg-gray-700"
           >
             <Plus className="w-3 h-3" />

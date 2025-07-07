@@ -430,17 +430,18 @@ app.post('/api/timer/:id/adjust-time', (req, res) => {
   }
   
   console.log(`API: Adjust timer ${timerId} by ${seconds} seconds`);
-  if (typeof seconds === 'number' && (!timer.isRunning || timer.isPaused)) {
+  if (typeof seconds === 'number') {
     const totalSeconds = timer.minutes * 60 + timer.seconds + seconds;
     const newMinutes = Math.floor(Math.max(0, totalSeconds) / 60);
     const newSeconds = Math.max(0, totalSeconds) % 60;
-    
+
     timer.minutes = newMinutes;
     timer.seconds = newSeconds;
     if (!timer.isRunning) {
       timer.startTime = { minutes: newMinutes, seconds: newSeconds };
     }
-    
+    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+
     broadcast({ action: 'adjust-time', timerId, minutes: newMinutes, seconds: newSeconds });
     broadcast({ type: 'status', ...serverClockState });
   }
