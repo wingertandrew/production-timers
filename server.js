@@ -438,7 +438,13 @@ app.post('/api/timer/:id/adjust-time', (req, res) => {
 
     timer.minutes = newMinutes;
     timer.seconds = newSeconds;
-    if (!timer.isRunning) {
+    if (timer.isRunning) {
+      const startTotal = timer.startTime.minutes * 60 + timer.startTime.seconds + seconds;
+      timer.startTime = {
+        minutes: Math.floor(Math.max(0, startTotal) / 60),
+        seconds: Math.max(0, startTotal) % 60,
+      };
+    } else {
       timer.startTime = { minutes: newMinutes, seconds: newSeconds };
     }
     timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
