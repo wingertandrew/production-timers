@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,19 +59,14 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
               {clockState.timers.map((timer) => (
                 <div key={timer.id} className="bg-gray-600 border border-gray-400 rounded-lg p-6">
                   <div className="flex items-center gap-6">
-                    {/* Timer ID */}
-                    <div className="text-2xl font-bold text-white min-w-[100px]">
-                      Timer {timer.id}
-                    </div>
-
-                    {/* Timer Name */}
+                    {/* Timer Name/Identifier */}
                     <div className="flex flex-col items-center">
-                      <label className="text-white text-sm mb-1">Name</label>
+                      <label className="text-white text-sm mb-1">Timer Name</label>
                       <Input
                         type="text"
                         value={timer.name || `Timer ${timer.id}`}
                         onChange={(e) => handleTimerNameChange(timer.id, e.target.value)}
-                        className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-32"
+                        className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-48"
                         placeholder={`Timer ${timer.id}`}
                       />
                     </div>
