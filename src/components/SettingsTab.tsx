@@ -16,6 +16,7 @@ interface SettingsTabProps {
   setNtpSyncInterval: (interval: number) => void;
   setNtpDriftThreshold: (threshold: number) => void;
   onSetTimerTime: (timerId: number, minutes: number, seconds: number) => void;
+  onSetTimerName: (timerId: number, name: string) => void;
   onApplyNtpSettings: () => void;
 }
 
@@ -28,11 +29,15 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   setNtpSyncInterval,
   setNtpDriftThreshold,
   onSetTimerTime,
+  onSetTimerName,
   onApplyNtpSettings
 }) => {
   const handleTimerTimeChange = (timerId: number, minutes: number, seconds: number) => {
-    // Auto-save when time is changed
     onSetTimerTime(timerId, minutes, seconds);
+  };
+
+  const handleTimerNameChange = (timerId: number, name: string) => {
+    onSetTimerName(timerId, name);
   };
 
   return (
@@ -51,86 +56,95 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                 Individual Timer Configuration (Auto-Save)
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {clockState.timers.map((timer) => (
-                  <Card key={timer.id} className="bg-gray-600 border-gray-400">
-                    <CardHeader>
-                      <CardTitle className="text-xl text-white text-center">
-                        Timer {timer.id}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex flex-col items-center space-y-4">
-                        {/* Minutes */}
-                        <div className="flex flex-col items-center">
-                          <label className="text-white text-lg mb-2">Minutes</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="59"
-                            value={timer.initialTime.minutes}
-                            onChange={(e) => handleTimerTimeChange(timer.id, parseInt(e.target.value) || 0, timer.initialTime.seconds)}
-                            className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl w-20"
-                          />
-                          <div className="flex gap-2 mt-2">
-                            <Button
-                              onClick={() => handleTimerTimeChange(timer.id, Math.max(0, timer.initialTime.minutes - 1), timer.initialTime.seconds)}
-                              size="sm"
-                              className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              onClick={() => handleTimerTimeChange(timer.id, Math.min(59, timer.initialTime.minutes + 1), timer.initialTime.seconds)}
-                              size="sm"
-                              className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
+            <CardContent className="space-y-4">
+              {clockState.timers.map((timer) => (
+                <div key={timer.id} className="bg-gray-600 border border-gray-400 rounded-lg p-6">
+                  <div className="flex items-center gap-6">
+                    {/* Timer ID */}
+                    <div className="text-2xl font-bold text-white min-w-[100px]">
+                      Timer {timer.id}
+                    </div>
 
-                        {/* Seconds */}
-                        <div className="flex flex-col items-center">
-                          <label className="text-white text-lg mb-2">Seconds</label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="59"
-                            value={timer.initialTime.seconds}
-                            onChange={(e) => handleTimerTimeChange(timer.id, timer.initialTime.minutes, parseInt(e.target.value) || 0)}
-                            className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl w-20"
-                          />
-                          <div className="flex gap-2 mt-2">
-                            <Button
-                              onClick={() => handleTimerTimeChange(timer.id, timer.initialTime.minutes, Math.max(0, timer.initialTime.seconds - 1))}
-                              size="sm"
-                              className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              onClick={() => handleTimerTimeChange(timer.id, timer.initialTime.minutes, Math.min(59, timer.initialTime.seconds + 1))}
-                              size="sm"
-                              className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
+                    {/* Timer Name */}
+                    <div className="flex flex-col items-center">
+                      <label className="text-white text-sm mb-1">Name</label>
+                      <Input
+                        type="text"
+                        value={timer.name || `Timer ${timer.id}`}
+                        onChange={(e) => handleTimerNameChange(timer.id, e.target.value)}
+                        className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-32"
+                        placeholder={`Timer ${timer.id}`}
+                      />
+                    </div>
 
-                        {/* Current Status */}
-                        <div className="text-center text-sm text-gray-300">
-                          Current: {timer.minutes}:{timer.seconds.toString().padStart(2, '0')}
-                          <br />
-                          Status: {timer.isRunning ? (timer.isPaused ? 'Paused' : 'Running') : 'Stopped'}
-                        </div>
+                    {/* Minutes */}
+                    <div className="flex flex-col items-center">
+                      <label className="text-white text-sm mb-1">Minutes</label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => handleTimerTimeChange(timer.id, Math.max(0, timer.initialTime.minutes - 1), timer.initialTime.seconds)}
+                          size="sm"
+                          className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="59"
+                          value={timer.initialTime.minutes}
+                          onChange={(e) => handleTimerTimeChange(timer.id, parseInt(e.target.value) || 0, timer.initialTime.seconds)}
+                          className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-bold rounded-lg w-16"
+                        />
+                        <Button
+                          onClick={() => handleTimerTimeChange(timer.id, Math.min(59, timer.initialTime.minutes + 1), timer.initialTime.seconds)}
+                          size="sm"
+                          className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+
+                    {/* Seconds */}
+                    <div className="flex flex-col items-center">
+                      <label className="text-white text-sm mb-1">Seconds</label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => handleTimerTimeChange(timer.id, timer.initialTime.minutes, Math.max(0, timer.initialTime.seconds - 1))}
+                          size="sm"
+                          className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="59"
+                          value={timer.initialTime.seconds}
+                          onChange={(e) => handleTimerTimeChange(timer.id, timer.initialTime.minutes, parseInt(e.target.value) || 0)}
+                          className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-bold rounded-lg w-16"
+                        />
+                        <Button
+                          onClick={() => handleTimerTimeChange(timer.id, timer.initialTime.minutes, Math.min(59, timer.initialTime.seconds + 1))}
+                          size="sm"
+                          className="h-8 w-8 bg-gray-400 hover:bg-gray-300 text-black rounded"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Current Status */}
+                    <div className="flex flex-col items-center text-sm text-gray-300">
+                      <div className="text-center">
+                        <div className="font-medium">Current: {timer.minutes}:{timer.seconds.toString().padStart(2, '0')}</div>
+                        <div className="text-xs">Status: {timer.isRunning ? (timer.isPaused ? 'Paused' : 'Running') : 'Stopped'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
 

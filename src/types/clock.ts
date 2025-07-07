@@ -1,4 +1,3 @@
-
 export interface SingleTimer {
   id: number;
   minutes: number;
@@ -11,6 +10,7 @@ export interface SingleTimer {
   totalPausedTime: number;
   currentPauseDuration: number;
   initialTime: { minutes: number; seconds: number };
+  name?: string;
 }
 
 export interface ClockState {

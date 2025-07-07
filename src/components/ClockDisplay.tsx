@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,13 +130,13 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
               >
                 <div className="px-6 py-4">
                   <div className="flex items-center gap-6">
-                    {/* Timer ID */}
-                    <div className={`text-4xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[80px]`}>
-                      {timer.id}
+                    {/* Timer Name and ID */}
+                    <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'} min-w-[200px]`}>
+                      {timer.name || `Timer ${timer.id}`}
                     </div>
 
                     {/* Times - Centered */}
-                    <div className="flex-1 flex justify-center gap-8 text-5xl font-mono">
+                    <div className="flex-1 flex justify-center gap-8 text-4xl font-mono">
                       <span className="text-green-400">+{elapsedTime}</span>
                       <span className="text-red-400">-{displayTime}</span>
                     </div>
@@ -298,7 +297,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
         {/* Footer Stats */}
         <div className="flex justify-between items-center text-white text-xl h-8">
           <div className="flex gap-8">
-            <div>Active: Timer {clockState.activeTimerId}</div>
+            <div>Active: {clockState.timers.find(t => t.id === clockState.activeTimerId)?.name || `Timer ${clockState.activeTimerId}`}</div>
             {ntpSyncStatus.enabled && ntpSyncStatus.syncCount > 0 && (
               <div className="text-blue-400">
                 NTP Syncs: {ntpSyncStatus.syncCount} | Errors: {ntpSyncStatus.errorCount}

@@ -24,7 +24,8 @@ const CountdownClock = () => {
     pauseStartTime: null,
     totalPausedTime: 0,
     currentPauseDuration: 0,
-    initialTime: { minutes: 1, seconds: 0 }
+    initialTime: { minutes: 1, seconds: 0 },
+    name: `Timer ${id}`
   });
 
   const [clockState, setClockState] = useState<ClockState>({
@@ -295,6 +296,22 @@ const CountdownClock = () => {
     }
   };
 
+  const setTimerName = async (timerId: number, name: string) => {
+    try {
+      const response = await fetch(`/api/timer/${timerId}/set-name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      
+      if (response.ok) {
+        addDebugLog('UI', `Timer ${timerId} name set via API`, { name });
+      }
+    } catch (error) {
+      addDebugLog('UI', `Failed to set timer ${timerId} name`, { error: error.message });
+    }
+  };
+
   const applyNtpSettings = async () => {
     addDebugLog('UI', 'NTP settings applied', { 
       ntpSyncEnabled,
@@ -345,8 +362,6 @@ const CountdownClock = () => {
           </TabsTrigger>
         </TabsList>
 
-
-
         <TabsContent value="clock" className="p-0 m-0 h-screen">
           <ClockDisplay
             clockState={clockState}
@@ -374,6 +389,7 @@ const CountdownClock = () => {
               setNtpSyncInterval={setNtpSyncInterval}
               setNtpDriftThreshold={setNtpDriftThreshold}
               onSetTimerTime={setTimerTime}
+              onSetTimerName={setTimerName}
               onApplyNtpSettings={applyNtpSettings}
             />
           </div>

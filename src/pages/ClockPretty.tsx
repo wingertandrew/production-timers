@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 
@@ -13,6 +12,7 @@ interface SingleTimer {
   totalPausedTime: number;
   currentPauseDuration: number;
   initialTime?: { minutes: number; seconds: number };
+  name?: string;
 }
 
 interface ClockData {
@@ -33,7 +33,8 @@ const ClockPretty = () => {
       elapsedSeconds: 0,
       totalPausedTime: 0,
       currentPauseDuration: 0,
-      initialTime: { minutes: 5, seconds: 0 }
+      initialTime: { minutes: 5, seconds: 0 },
+      name: `Timer ${i + 1}`
     })),
     activeTimerId: 1,
     ntpOffset: 0
@@ -96,18 +97,21 @@ const ClockPretty = () => {
     return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
   };
 
-  const getColorInfo = (timer: SingleTimer) => {
+  const getTimerBackgroundColor = (timer: SingleTimer) => {
     const remaining = timer.minutes * 60 + timer.seconds;
     if (remaining <= 10) {
-      return { class: 'text-red-400', pulse: true };
+      return 'bg-red-900/30';
     }
     if (remaining <= 20) {
-      return { class: 'text-yellow-400', pulse: false };
+      return 'bg-yellow-900/30';
     }
     if (timer.isRunning && !timer.isPaused) {
-      return { class: 'text-green-400', pulse: false };
+      return 'bg-green-900/30';
     }
-    return { class: 'text-gray-400', pulse: false };
+    if (timer.isPaused) {
+      return 'bg-orange-900/30';
+    }
+    return 'bg-gray-900/30';
   };
 
   const getStatusText = (timer: SingleTimer) => {
@@ -116,9 +120,15 @@ const ClockPretty = () => {
     return 'STOPPED';
   };
 
+  const getStatusColor = (timer: SingleTimer) => {
+    if (timer.isPaused) return 'text-orange-400';
+    if (timer.isRunning) return 'text-green-400';
+    return 'text-gray-400';
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-6xl font-bold text-white mb-4">TIMER OVERVIEW</h1>
@@ -127,59 +137,61 @@ const ClockPretty = () => {
           </div>
         </div>
 
-        {/* All Timers Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {/* All Timers - Horizontal Lines */}
+        <div className="space-y-4">
           {clockData.timers.map((timer) => {
             const progress = getProgressPercentage(timer);
             const isActive = timer.id === clockData.activeTimerId;
-            const colorInfo = getColorInfo(timer);
+            const backgroundColorClass = getTimerBackgroundColor(timer);
+            const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
+            const remainingTime = formatTime(timer.minutes, timer.seconds);
             
             return (
               <div
                 key={timer.id}
-                className={`bg-gray-900 rounded-2xl p-8 border-2 transition-all ${
-                  isActive ? 'border-blue-500 bg-gray-800 scale-105' : 'border-gray-700'
-                }`}
+                className={`${backgroundColorClass} border-2 ${
+                  isActive ? 'border-blue-500' : 'border-gray-700'
+                } rounded-xl p-6 transition-all`}
               >
-                {/* Timer Header */}
-                <div className="text-center mb-6">
-                  <div className={`text-4xl font-bold mb-2 ${isActive ? 'text-blue-400' : 'text-white'}`}>
-                    TIMER {timer.id}
+                <div className="flex items-center gap-8">
+                  {/* Timer ID and Name */}
+                  <div className="min-w-[200px]">
+                    <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
+                      {timer.name || `Timer ${timer.id}`}
+                    </div>
+                    <div className={`text-lg font-medium ${getStatusColor(timer)}`}>
+                      {getStatusText(timer)}
+                    </div>
                   </div>
-                  <div className={`text-2xl font-bold ${colorInfo.class}`}>
-                    {getStatusText(timer)}
+
+                  {/* Times - Elapsed and Remaining */}
+                  <div className="flex-1 flex justify-center gap-12 text-4xl font-mono">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400 mb-1">ELAPSED</div>
+                      <div className="text-green-400">+{elapsedTime}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-400 mb-1">REMAINING</div>
+                      <div className="text-red-400">-{remainingTime}</div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="min-w-[300px]">
+                    <Progress 
+                      value={progress} 
+                      className="h-6 bg-gray-700"
+                    />
+                    <div className="flex justify-between text-sm text-gray-400 mt-2">
+                      <span>{progress.toFixed(1)}%</span>
+                      <span>Complete</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Main Time Display */}
-                <div className="text-center mb-6">
-                  <div
-                    className={`text-8xl font-mono font-bold mb-4 ${colorInfo.class} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
-                  >
-                    {formatTime(timer.minutes, timer.seconds)}
-                  </div>
-                  
-                  {/* Elapsed Time */}
-                  <div className="text-2xl font-mono text-green-400">
-                    Elapsed: {formatTime(timer.elapsedMinutes, timer.elapsedSeconds)}
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mb-6">
-                  <Progress 
-                    value={progress} 
-                    className="h-4 bg-gray-700"
-                  />
-                  <div className="flex justify-between text-sm text-gray-400 mt-2">
-                    <span>{progress.toFixed(1)}%</span>
-                    <span>Complete</span>
-                  </div>
-                </div>
-
-                {/* Additional Info */}
+                {/* Additional Info - Pause Times */}
                 {(timer.isPaused || timer.totalPausedTime > 0) && (
-                  <div className="text-center space-y-2">
+                  <div className="mt-4 text-center space-y-1">
                     {timer.isPaused && (
                       <div className="text-yellow-400 text-lg animate-pulse">
                         Current Pause: {formatDuration(timer.currentPauseDuration)}
