@@ -33,6 +33,7 @@ Complete REST API for external timer control with discrete timer support:
 - `POST /api/timer/{id}/reset` - Reset a specific timer (1-5)
 - `POST /api/timer/{id}/set-time` - Set timer duration (minutes, seconds)
 - `POST /api/timer/{id}/adjust-time` - Adjust timer by seconds
+- `POST /api/timer/{id}/set-name` - Update timer name
 
 #### Batch Operations
 - `POST /api/reset` - Reset all timers
@@ -95,6 +96,13 @@ Adjust the remaining time:
 curl -X POST http://localhost:8080/api/timer/{id}/adjust-time \
   -H "Content-Type: application/json" \
   -d '{"seconds": 30}'
+```
+
+Set a timer's name:
+```bash
+curl -X POST http://localhost:8080/api/timer/{id}/set-name \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Intro"}'
 ```
 
 Common increments for Companion integration:
