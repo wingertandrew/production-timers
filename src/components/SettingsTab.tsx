@@ -59,6 +59,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const commitTimerName = (timerId: number) => {
     const name = nameValues[timerId] ?? `Timer ${timerId}`;
+    setNameValues(prev => ({ ...prev, [timerId]: name }));
     onSetTimerName(timerId, name);
   };
 

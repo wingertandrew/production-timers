@@ -183,14 +183,17 @@ const ClockPretty = () => {
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="flex-1">
-                    <div className="w-full h-6 bg-gray-700 rounded">
-                      <div
-                        className={`h-full rounded ${getProgressColor(timer)}`}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
+                  {/* Spacer to align progress bar */}
+                  <div className="flex-1" />
+                </div>
+
+                {/* Progress Bar Below */}
+                <div className="mt-4">
+                  <div className="w-full h-6 bg-gray-700 rounded">
+                    <div
+                      className={`h-full rounded ${getProgressColor(timer)}`}
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
                 </div>
 
