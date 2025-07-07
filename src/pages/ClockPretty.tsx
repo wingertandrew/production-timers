@@ -88,11 +88,13 @@ const ClockPretty = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getRemainingPercentage = (timer: SingleTimer) => {
+  const getElapsedPercentage = (timer: SingleTimer) => {
     if (!timer.initialTime) return 0;
-    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
-    const remainingSeconds = timer.minutes * 60 + timer.seconds;
-    return totalInitialSeconds > 0 ? (remainingSeconds / totalInitialSeconds) * 100 : 0;
+    const totalInitialSeconds =
+      timer.initialTime.minutes * 60 + timer.initialTime.seconds;
+    const elapsedSeconds = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
+    if (totalInitialSeconds === 0) return 0;
+    return Math.min((elapsedSeconds / totalInitialSeconds) * 100, 100);
   };
 
   const getProgressColor = (timer: SingleTimer) => {
@@ -147,7 +149,7 @@ const ClockPretty = () => {
         {/* All Timers - Horizontal Lines */}
         <div className="space-y-4">
           {clockData.timers.map((timer) => {
-            const progress = getRemainingPercentage(timer);
+            const progress = getElapsedPercentage(timer);
             const isActive = timer.id === clockData.activeTimerId;
             const backgroundColorClass = getTimerBackgroundColor(timer);
             const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
