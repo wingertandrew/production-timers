@@ -11,9 +11,13 @@ interface ApiInfoTabProps {
 }
 
 const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => {
-  if (typeof window === 'undefined') return null;
   const handleCopyCommand = async (endpoint: string) => {
     await copyCommand(endpoint, onCommandCopy);
+  };
+
+  const getPort = () => {
+    if (typeof window === 'undefined') return '8080';
+    return window.location.port || '8080';
   };
 
   const increments = [1, 5, 10, 15, 30];
@@ -30,13 +34,13 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
             <ul className="list-disc list-inside mt-4 space-y-3">
               <li>
                 <code className="bg-gray-900 px-4 py-2 rounded text-lg text-green-400">
-                  http://{ipAddress}:{window.location.port || 8080}
+                  http://{ipAddress}:{getPort()}
                 </code>
               </li>
               {ipAddress !== 'localhost' && (
                 <li>
                   <code className="bg-gray-900 px-4 py-2 rounded text-lg text-green-400">
-                    http://localhost:{window.location.port || 8080}
+                    http://localhost:{getPort()}
                   </code>
                 </li>
               )}
@@ -151,20 +155,20 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                 <ul className="list-disc list-inside space-y-3 text-gray-300">
                   <li className="text-lg">Use "Generic HTTP" module in Companion</li>
                   <li className="text-lg">Set target IP: <code className="bg-gray-900 px-2 py-1 rounded">{ipAddress}</code></li>
-                  <li className="text-lg">Port: <code className="bg-gray-900 px-2 py-1 rounded">{window.location.port || 8080}</code></li>
+                  <li className="text-lg">Port: <code className="bg-gray-900 px-2 py-1 rounded">{getPort()}</code></li>
                   <li className="text-lg">Method: POST for controls, GET for status</li>
                 </ul>
                 
                 <div className="mt-6 p-4 bg-gray-800 rounded-lg">
                   <h4 className="text-xl font-bold text-white mb-3">Example Button Setup:</h4>
                   <div className="space-y-2 text-gray-300">
-                    <div><strong>Start:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/start</code></div>
-                    <div><strong>Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/pause</code></div>
-                    <div><strong>Reset:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/reset</code></div>
+                    <div><strong>Start:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/start</code></div>
+                    <div><strong>Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/pause</code></div>
+                    <div><strong>Reset:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/reset</code></div>
                   </div>
                   <div className="mt-4 p-3 bg-blue-900/30 rounded">
                     <p className="text-blue-300 font-bold">Each timer uses the same endpoint pattern.</p>
-                    <p className="text-gray-300 text-sm">Replace <code>{id}</code> with 1–5 for the desired timer.</p>
+                    <p className="text-gray-300 text-sm">Replace <code>{'{id}'}</code> with 1–5 for the desired timer.</p>
                   </div>
 
                   <div className="mt-6 p-4 bg-gray-800 rounded-lg">
@@ -172,7 +176,7 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                     <ul className="list-disc list-inside space-y-2 text-gray-300">
                       {increments.map(sec => (
                         <li key={sec}>
-                          <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/adjust-time</code>
+                          <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/adjust-time</code>
                           <span className="ml-2">seconds: {sec}</span>
                         </li>
                       ))}
