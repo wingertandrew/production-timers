@@ -11,6 +11,7 @@ interface ApiInfoTabProps {
 }
 
 const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => {
+  if (typeof window === 'undefined') return null;
   const handleCopyCommand = async (endpoint: string) => {
     await copyCommand(endpoint, onCommandCopy);
   };
