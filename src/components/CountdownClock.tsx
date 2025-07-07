@@ -369,7 +369,7 @@ const CountdownClock = () => {
             ntpSyncStatus={ntpSyncStatus}
             onTogglePlayPause={() => pauseTimer(clockState.activeTimerId || 1)}
             onResetTime={() => resetTimer(clockState.activeTimerId || 1)}
-            onAdjustTimeBySeconds={(seconds) => adjustTimeBySeconds(clockState.activeTimerId || 1, seconds)}
+            onAdjustTimeBySeconds={(id, seconds) => adjustTimeBySeconds(id, seconds)}
             onStartTimer={startTimer}
             onPauseTimer={pauseTimer}
             onResetTimer={resetTimer}

@@ -72,50 +72,46 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
           <div className="space-y-8">
             <div>
               <h3 className="text-2xl font-bold text-green-400 mb-6">Individual Timer Controls</h3>
-              <div className="space-y-4 text-lg">
-                {[1, 2, 3, 4, 5].map(timerId => (
-                  <div key={timerId} className="space-y-3">
-                    <h4 className="text-xl font-bold text-blue-300 mb-2">Timer {timerId} Controls</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                          <code className="text-lg text-green-300 font-bold">POST /api/timer/{timerId}/start</code>
-                          <p className="text-gray-300 text-sm mt-1">Start timer {timerId}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleCopyCommand(`/api/timer/${timerId}/start`)} className="h-12 w-12">
-                          <Copy className="w-6 h-6 text-white" />
-                        </Button>
-                      </div>
-                      <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                          <code className="text-lg text-yellow-300 font-bold">POST /api/timer/{timerId}/pause</code>
-                          <p className="text-gray-300 text-sm mt-1">Pause/Resume timer {timerId}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleCopyCommand(`/api/timer/${timerId}/pause`)} className="h-12 w-12">
-                          <Copy className="w-6 h-6 text-white" />
-                        </Button>
-                      </div>
-                      <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                          <code className="text-lg text-red-300 font-bold">POST /api/timer/{timerId}/reset</code>
-                          <p className="text-gray-300 text-sm mt-1">Reset timer {timerId}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleCopyCommand(`/api/timer/${timerId}/reset`)} className="h-12 w-12">
-                          <Copy className="w-6 h-6 text-white" />
-                        </Button>
-                      </div>
-                      <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                          <code className="text-lg text-cyan-300 font-bold">POST /api/timer/{timerId}/set-time</code>
-                          <p className="text-gray-300 text-sm mt-1">Set timer {timerId} duration</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleCopyCommand(`/api/timer/${timerId}/set-time`)} className="h-12 w-12">
-                          <Copy className="w-6 h-6 text-white" />
-                        </Button>
-                      </div>
+              <div className="space-y-3 text-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                      <code className="text-lg text-green-300 font-bold">POST /api/timer/{'{id}'}/start</code>
+                      <p className="text-gray-300 text-sm mt-1">Start timer <code>{'{id}'}</code></p>
                     </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCopyCommand('/api/timer/{id}/start')} className="h-12 w-12">
+                      <Copy className="w-6 h-6 text-white" />
+                    </Button>
                   </div>
-                ))}
+                  <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                      <code className="text-lg text-yellow-300 font-bold">POST /api/timer/{'{id}'}/pause</code>
+                      <p className="text-gray-300 text-sm mt-1">Pause/Resume timer <code>{'{id}'}</code></p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCopyCommand('/api/timer/{id}/pause')} className="h-12 w-12">
+                      <Copy className="w-6 h-6 text-white" />
+                    </Button>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                      <code className="text-lg text-red-300 font-bold">POST /api/timer/{'{id}'}/reset</code>
+                      <p className="text-gray-300 text-sm mt-1">Reset timer <code>{'{id}'}</code></p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCopyCommand('/api/timer/{id}/reset')} className="h-12 w-12">
+                      <Copy className="w-6 h-6 text-white" />
+                    </Button>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                      <code className="text-lg text-cyan-300 font-bold">POST /api/timer/{'{id}'}/set-time</code>
+                      <p className="text-gray-300 text-sm mt-1">Set timer <code>{'{id}'}</code> duration</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCopyCommand('/api/timer/{id}/set-time')} className="h-12 w-12">
+                      <Copy className="w-6 h-6 text-white" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm mt-3">Replace <code>{'{id}'}</code> with the timer number (1-5).</p>
               </div>
             </div>
 
@@ -173,11 +169,12 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
 
                   <div className="mt-6 p-4 bg-gray-800 rounded-lg">
                     <h4 className="text-xl font-bold text-white mb-3">Add Time Increments</h4>
+                    <p className="text-gray-300 mb-2 text-sm">Send any value in the JSON body to add or subtract seconds.</p>
                     <ul className="list-disc list-inside space-y-2 text-gray-300">
                       {increments.map(sec => (
                         <li key={sec}>
                           <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/adjust-time</code>
-                          <span className="ml-2">seconds: {sec}</span>
+                          <span className="ml-2">{'{"seconds": ' + sec + '}'}</span>
                         </li>
                       ))}
                     </ul>

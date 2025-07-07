@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Progress } from '@/components/ui/progress';
 
 interface SingleTimer {
   id: number;
@@ -89,12 +88,20 @@ const ClockPretty = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getProgressPercentage = (timer: SingleTimer) => {
+  const getRemainingPercentage = (timer: SingleTimer) => {
     if (!timer.initialTime) return 0;
     const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
     const remainingSeconds = timer.minutes * 60 + timer.seconds;
-    const elapsedSeconds = totalInitialSeconds - remainingSeconds;
-    return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
+    return totalInitialSeconds > 0 ? (remainingSeconds / totalInitialSeconds) * 100 : 0;
+  };
+
+  const getProgressColor = (timer: SingleTimer) => {
+    const remaining = timer.minutes * 60 + timer.seconds;
+    if (timer.isPaused) return 'bg-orange-600';
+    if (!timer.isRunning) return 'bg-gray-600';
+    if (remaining <= 10) return 'bg-red-600';
+    if (remaining <= 20) return 'bg-yellow-500';
+    return 'bg-green-600';
   };
 
   const getTimerBackgroundColor = (timer: SingleTimer) => {
@@ -140,7 +147,7 @@ const ClockPretty = () => {
         {/* All Timers - Horizontal Lines */}
         <div className="space-y-4">
           {clockData.timers.map((timer) => {
-            const progress = getProgressPercentage(timer);
+            const progress = getRemainingPercentage(timer);
             const isActive = timer.id === clockData.activeTimerId;
             const backgroundColorClass = getTimerBackgroundColor(timer);
             const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
@@ -177,14 +184,12 @@ const ClockPretty = () => {
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="min-w-[300px]">
-                    <Progress 
-                      value={progress} 
-                      className="h-6 bg-gray-700"
-                    />
-                    <div className="flex justify-between text-sm text-gray-400 mt-2">
-                      <span>{progress.toFixed(1)}%</span>
-                      <span>Complete</span>
+                  <div className="flex-1">
+                    <div className="w-full h-6 bg-gray-700 rounded">
+                      <div
+                        className={`h-full rounded ${getProgressColor(timer)}`}
+                        style={{ width: `${progress}%` }}
+                      />
                     </div>
                   </div>
                 </div>

@@ -11,7 +11,7 @@ interface ClockDisplayProps {
   ntpSyncStatus: NTPSyncStatus;
   onTogglePlayPause: () => void;
   onResetTime: () => void;
-  onAdjustTimeBySeconds: (seconds: number) => void;
+  onAdjustTimeBySeconds: (timerId: number, seconds: number) => void;
   onStartTimer: (timerId: number) => void;
   onPauseTimer: (timerId: number) => void;
   onResetTimer: (timerId: number) => void;
@@ -193,7 +193,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                         <Button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAdjustTimeBySeconds(1);
+                            onAdjustTimeBySeconds(timer.id, 1);
                           }}
                           className="h-12 px-2 bg-gray-600 hover:bg-gray-500 text-white text-sm"
                         >
@@ -202,7 +202,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                         <Button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAdjustTimeBySeconds(5);
+                            onAdjustTimeBySeconds(timer.id, 5);
                           }}
                           className="h-12 px-2 bg-gray-600 hover:bg-gray-500 text-white text-sm"
                         >
@@ -211,7 +211,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                         <Button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onAdjustTimeBySeconds(15);
+                            onAdjustTimeBySeconds(timer.id, 15);
                           }}
                           className="h-12 px-2 bg-gray-600 hover:bg-gray-500 text-white text-sm"
                         >
