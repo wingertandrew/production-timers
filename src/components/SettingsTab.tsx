@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +11,15 @@ interface SettingsTabProps {
   ntpSyncEnabled: boolean;
   ntpSyncInterval: number;
   ntpDriftThreshold: number;
+  serverPort: number;
   setNtpSyncEnabled: (enabled: boolean) => void;
   setNtpSyncInterval: (interval: number) => void;
   setNtpDriftThreshold: (threshold: number) => void;
+  setServerPort: (port: number) => void;
   onSetTimerTime: (timerId: number, minutes: number, seconds: number) => void;
   onSetTimerName: (timerId: number, name: string) => void;
   onApplyNtpSettings: () => void;
+  onApplyServerPort: () => void;
 }
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -24,19 +27,44 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   ntpSyncEnabled,
   ntpSyncInterval,
   ntpDriftThreshold,
+  serverPort,
   setNtpSyncEnabled,
   setNtpSyncInterval,
   setNtpDriftThreshold,
+  setServerPort,
   onSetTimerTime,
   onSetTimerName,
-  onApplyNtpSettings
+  onApplyNtpSettings,
+  onApplyServerPort
 }) => {
+  const [nameInputs, setNameInputs] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    const map: Record<number, string> = {};
+    clockState.timers.forEach(t => {
+      map[t.id] = nameInputs[t.id] ?? (t.name || `Timer ${t.id}`);
+    });
+    setNameInputs(map);
+  }, [clockState.timers]);
   const handleTimerTimeChange = (timerId: number, minutes: number, seconds: number) => {
     onSetTimerTime(timerId, minutes, seconds);
   };
 
   const handleTimerNameChange = (timerId: number, name: string) => {
+    setNameInputs(prev => ({ ...prev, [timerId]: name }));
+  };
+
+  const commitTimerName = (timerId: number) => {
+    const name = nameInputs[timerId];
     onSetTimerName(timerId, name);
+  };
+
+  const handlePortChange = (value: number) => {
+    setServerPort(value);
+  };
+
+  const commitPort = () => {
+    onApplyServerPort();
   };
 
   return (
@@ -64,8 +92,14 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                       <label className="text-white text-sm mb-1">Timer Name</label>
                       <Input
                         type="text"
-                        value={timer.name || `Timer ${timer.id}`}
+                        value={nameInputs[timer.id]}
                         onChange={(e) => handleTimerNameChange(timer.id, e.target.value)}
+                        onBlur={() => commitTimerName(timer.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                          }
+                        }}
                         className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-medium rounded-lg w-48"
                         placeholder={`Timer ${timer.id}`}
                       />
@@ -139,6 +173,32 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Server Port Setting */}
+          <Card className="bg-gray-700 border-gray-500">
+            <CardHeader>
+              <CardTitle className="text-2xl text-white flex items-center gap-3">
+                <Server className="w-8 h-8" />
+                Server Port
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <Input
+                  type="number"
+                  value={serverPort}
+                  onChange={(e) => handlePortChange(parseInt(e.target.value) || 0)}
+                  onBlur={commitPort}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="w-24 bg-gray-700 border-gray-500 text-white text-center"
+                />
+              </div>
             </CardContent>
           </Card>
 

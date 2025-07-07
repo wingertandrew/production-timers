@@ -8,7 +8,6 @@ interface SingleTimer {
   isPaused: boolean;
   elapsedMinutes: number;
   elapsedSeconds: number;
-  totalPausedTime: number;
   currentPauseDuration: number;
   initialTime?: { minutes: number; seconds: number };
   name?: string;
@@ -30,7 +29,6 @@ const ClockPretty = () => {
       isPaused: false,
       elapsedMinutes: 0,
       elapsedSeconds: 0,
-      totalPausedTime: 0,
       currentPauseDuration: 0,
       initialTime: { minutes: 5, seconds: 0 },
       name: `Timer ${i + 1}`
@@ -88,11 +86,13 @@ const ClockPretty = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getRemainingPercentage = (timer: SingleTimer) => {
+  const getElapsedPercentage = (timer: SingleTimer) => {
     if (!timer.initialTime) return 0;
     const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
     const remainingSeconds = timer.minutes * 60 + timer.seconds;
-    return totalInitialSeconds > 0 ? (remainingSeconds / totalInitialSeconds) * 100 : 0;
+    return totalInitialSeconds > 0
+      ? ((totalInitialSeconds - remainingSeconds) / totalInitialSeconds) * 100
+      : 0;
   };
 
   const getProgressColor = (timer: SingleTimer) => {
@@ -147,7 +147,7 @@ const ClockPretty = () => {
         {/* All Timers - Horizontal Lines */}
         <div className="space-y-4">
           {clockData.timers.map((timer) => {
-            const progress = getRemainingPercentage(timer);
+            const progress = getElapsedPercentage(timer);
             const isActive = timer.id === clockData.activeTimerId;
             const backgroundColorClass = getTimerBackgroundColor(timer);
             const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
@@ -195,18 +195,11 @@ const ClockPretty = () => {
                 </div>
 
                 {/* Additional Info - Pause Times */}
-                {(timer.isPaused || timer.totalPausedTime > 0) && (
+                {timer.isPaused && (
                   <div className="mt-4 text-center space-y-1">
-                    {timer.isPaused && (
-                      <div className="text-yellow-400 text-lg animate-pulse">
-                        Current Pause: {formatDuration(timer.currentPauseDuration)}
-                      </div>
-                    )}
-                    {timer.totalPausedTime > 0 && (
-                      <div className="text-yellow-300 text-sm">
-                        Total Paused: {formatDuration(timer.totalPausedTime)}
-                      </div>
-                    )}
+                    <div className="text-yellow-400 text-lg animate-pulse">
+                      Current Pause: {formatDuration(timer.currentPauseDuration)}
+                    </div>
                   </div>
                 )}
               </div>

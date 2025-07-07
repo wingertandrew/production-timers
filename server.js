@@ -12,6 +12,7 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(express.json());
 
+let PORT = Number(process.env.PORT) || 8080;
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -25,7 +26,6 @@ const createInitialTimer = (id) => ({
   elapsedMinutes: 0,
   elapsedSeconds: 0,
   pauseStartTime: null,
-  totalPausedTime: 0,
   currentPauseDuration: 0,
   initialTime: { minutes: 1, seconds: 0 },
   startTime: { minutes: 1, seconds: 0 },
@@ -39,7 +39,8 @@ let serverClockState = {
   ntpSyncEnabled: false,
   ntpOffset: 0,
   ntpSyncInterval: Number(process.env.NTP_SYNC_INTERVAL) || 1800000,
-  ntpDriftThreshold: Number(process.env.NTP_DRIFT_THRESHOLD) || 50
+  ntpDriftThreshold: Number(process.env.NTP_DRIFT_THRESHOLD) || 50,
+  serverPort: PORT
 };
 
 let serverTimers = {};
@@ -353,11 +354,6 @@ app.post('/api/timer/:id/start', (req, res) => {
       seconds: timer.seconds
     };
   }
-  if (timer.isPaused && timer.pauseStartTime) {
-    timer.totalPausedTime += Math.floor(
-      (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
-    );
-  }
   timer.isRunning = true;
   timer.isPaused = false;
   timer.pauseStartTime = null;
@@ -366,6 +362,24 @@ app.post('/api/timer/:id/start', (req, res) => {
   
   startServerTimer(timerId);
   broadcast({ action: 'start', timerId });
+  res.json({ success: true });
+});
+
+app.post('/api/set-port', (req, res) => {
+  const { port } = req.body;
+  const newPort = parseInt(port);
+  if (!newPort || newPort <= 0 || newPort > 65535) {
+    return res.status(400).json({ error: 'Invalid port' });
+  }
+  console.log(`API: Change server port to ${newPort}`);
+  server.close(() => {
+    PORT = newPort;
+    serverClockState.serverPort = newPort;
+    server.listen(PORT, () => {
+      console.log(`Server listening on http://localhost:${PORT}`);
+      broadcast({ type: 'status', ...serverClockState });
+    });
+  });
   res.json({ success: true });
 });
 
@@ -380,11 +394,6 @@ app.post('/api/timer/:id/pause', (req, res) => {
   console.log(`API: Pause/Resume timer ${timerId}`);
   if (timer.isPaused) {
     // Resume
-    if (timer.pauseStartTime) {
-      timer.totalPausedTime += Math.floor(
-        (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
-      );
-    }
     timer.isPaused = false;
     timer.pauseStartTime = null;
     timer.currentPauseDuration = 0;
@@ -416,7 +425,6 @@ app.post('/api/timer/:id/reset', (req, res) => {
   timer.elapsedMinutes = 0;
   timer.elapsedSeconds = 0;
   timer.pauseStartTime = null;
-  timer.totalPausedTime = 0;
   timer.currentPauseDuration = 0;
   timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
   
@@ -436,7 +444,7 @@ app.post('/api/timer/:id/adjust-time', (req, res) => {
   }
   
   console.log(`API: Adjust timer ${timerId} by ${seconds} seconds`);
-  if (typeof seconds === 'number' && (!timer.isRunning || timer.isPaused)) {
+  if (typeof seconds === 'number') {
     const totalSeconds = timer.minutes * 60 + timer.seconds + seconds;
     const newMinutes = Math.floor(Math.max(0, totalSeconds) / 60);
     const newSeconds = Math.max(0, totalSeconds) % 60;
@@ -474,12 +482,26 @@ app.post('/api/timer/:id/set-time', (req, res) => {
   timer.elapsedSeconds = 0;
   timer.isRunning = false;
   timer.isPaused = false;
-  timer.totalPausedTime = 0;
   timer.currentPauseDuration = 0;
   timer.pauseStartTime = null;
   
   stopServerTimer(timerId);
   broadcast({ action: 'set-time', timerId, minutes: newMinutes, seconds: newSeconds });
+  broadcast({ type: 'status', ...serverClockState });
+  res.json({ success: true });
+});
+
+app.post('/api/timer/:id/set-name', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+  const { name } = req.body;
+
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+
+  timer.name = String(name || '').slice(0, 100);
+  broadcast({ action: 'set-name', timerId, name: timer.name });
   broadcast({ type: 'status', ...serverClockState });
   res.json({ success: true });
 });
@@ -508,7 +530,6 @@ app.post('/api/reset', (req, res) => {
     timer.elapsedMinutes = 0;
     timer.elapsedSeconds = 0;
     timer.pauseStartTime = null;
-    timer.totalPausedTime = 0;
     timer.currentPauseDuration = 0;
     timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
     stopServerTimer(timer.id);
@@ -605,6 +626,10 @@ app.get('/api/docs', (req, res) => {
         "POST /api/timer/:id/set-time": {
           description: "Set specific timer duration",
           body: { minutes: "number", seconds: "number" }
+        },
+        "POST /api/timer/:id/set-name": {
+          description: "Set specific timer name",
+          body: { name: "string" }
         }
       },
       legacy_control: {
@@ -650,7 +675,6 @@ app.get('*', (_req, res) => {
   res.sendFile(join(dist, 'index.html'));
 });
 
-const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
   console.log(`API Documentation: http://localhost:${PORT}/api/docs`);

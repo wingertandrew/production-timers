@@ -7,18 +7,15 @@ import { copyCommand } from '@/utils/clockUtils';
 
 interface ApiInfoTabProps {
   ipAddress: string;
+  serverPort: number;
   onCommandCopy: (command: string) => void;
 }
 
-const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => {
+const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, serverPort, onCommandCopy }) => {
   const handleCopyCommand = async (endpoint: string) => {
     await copyCommand(endpoint, onCommandCopy);
   };
 
-  const getPort = () => {
-    if (typeof window === 'undefined') return '8080';
-    return window.location.port || '8080';
-  };
 
   const increments = [1, 5, 10, 15, 30];
 
@@ -34,13 +31,13 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
             <ul className="list-disc list-inside mt-4 space-y-3">
               <li>
                 <code className="bg-gray-900 px-4 py-2 rounded text-lg text-green-400">
-                  http://{ipAddress}:{getPort()}
+                  http://{ipAddress}:{serverPort}
                 </code>
               </li>
               {ipAddress !== 'localhost' && (
                 <li>
                   <code className="bg-gray-900 px-4 py-2 rounded text-lg text-green-400">
-                    http://localhost:{getPort()}
+                    http://localhost:{serverPort}
                   </code>
                 </li>
               )}
@@ -151,7 +148,7 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                 <ul className="list-disc list-inside space-y-3 text-gray-300">
                   <li className="text-lg">Use "Generic HTTP" module in Companion</li>
                   <li className="text-lg">Set target IP: <code className="bg-gray-900 px-2 py-1 rounded">{ipAddress}</code></li>
-                  <li className="text-lg">Port: <code className="bg-gray-900 px-2 py-1 rounded">{getPort()}</code></li>
+                  <li className="text-lg">Port: <code className="bg-gray-900 px-2 py-1 rounded">{serverPort}</code></li>
                   <li className="text-lg">Method: POST for controls, GET for status</li>
                 </ul>
                 

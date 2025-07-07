@@ -26,7 +26,6 @@ const InfoTab: React.FC = () => (
             <li><code>isRunning</code> – Timer is actively counting down.</li>
             <li><code>isPaused</code> – Timer is paused but will resume from the same time.</li>
             <li><code>elapsedMinutes</code> / <code>elapsedSeconds</code> – Time elapsed in the current round.</li>
-            <li><code>totalPausedTime</code> – Sum of all pause durations.</li>
             <li><code>isBetweenRounds</code> – Indicates the between-rounds timer is running.</li>
           </ul>
           <p>All state changes are broadcast to every connected display via WebSocket so that all clients stay in sync.</p>

@@ -7,7 +7,6 @@ export interface SingleTimer {
   elapsedMinutes: number;
   elapsedSeconds: number;
   pauseStartTime: number | null;
-  totalPausedTime: number;
   currentPauseDuration: number;
   initialTime: { minutes: number; seconds: number };
   name?: string;
@@ -20,6 +19,7 @@ export interface ClockState {
   ntpSyncInterval: number;
   ntpDriftThreshold: number;
   ntpOffset: number;
+  serverPort?: number;
   masterClockStartTime?: number;
   ntpTimestamp?: number | null;
   serverTime?: number;

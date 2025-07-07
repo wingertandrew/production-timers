@@ -8,7 +8,6 @@ interface SingleTimer {
   isPaused: boolean;
   elapsedMinutes: number;
   elapsedSeconds: number;
-  totalPausedTime: number;
   currentPauseDuration: number;
   initialTime?: { minutes: number; seconds: number };
   name?: string;
@@ -30,7 +29,6 @@ const FloatingClock: React.FC = () => {
       isPaused: false,
       elapsedMinutes: 0,
       elapsedSeconds: 0,
-      totalPausedTime: 0,
       currentPauseDuration: 0,
       initialTime: { minutes: 5, seconds: 0 },
       name: `Timer ${i + 1}`

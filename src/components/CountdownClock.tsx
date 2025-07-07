@@ -22,7 +22,6 @@ const CountdownClock = () => {
     elapsedMinutes: 0,
     elapsedSeconds: 0,
     pauseStartTime: null,
-    totalPausedTime: 0,
     currentPauseDuration: 0,
     initialTime: { minutes: 1, seconds: 0 },
     name: `Timer ${id}`
@@ -34,8 +33,11 @@ const CountdownClock = () => {
     ntpSyncEnabled: false,
     ntpSyncInterval: 21600000,
     ntpDriftThreshold: 50,
-    ntpOffset: 0
+    ntpOffset: 0,
+    serverPort: parseInt(window.location.port) || 8080
   });
+
+  const [serverPort, setServerPort] = useState(clockState.serverPort);
 
   const [inputMinutes, setInputMinutes] = useState(5);
   const [inputSeconds, setInputSeconds] = useState(0);
@@ -297,18 +299,24 @@ const CountdownClock = () => {
   };
 
   const setTimerName = async (timerId: number, name: string) => {
+    setClockState(prev => ({
+      ...prev,
+      timers: prev.timers.map(t =>
+        t.id === timerId ? { ...t, name } : t
+      )
+    }));
     try {
       const response = await fetch(`/api/timer/${timerId}/set-name`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
       });
-      
+
       if (response.ok) {
         addDebugLog('UI', `Timer ${timerId} name set via API`, { name });
       }
     } catch (error) {
-      addDebugLog('UI', `Failed to set timer ${timerId} name`, { error: error.message });
+      addDebugLog('UI', `Failed to set timer ${timerId} name`, { error: (error as Error).message });
     }
   };
 
@@ -334,6 +342,19 @@ const CountdownClock = () => {
     }
     
     toast({ title: "NTP Settings Applied" });
+  };
+
+  const applyServerPort = async () => {
+    addDebugLog('UI', 'Server port updated', { serverPort });
+    try {
+      await fetch('/api/set-port', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: serverPort })
+      });
+    } catch (error) {
+      addDebugLog('UI', 'Failed to update server port', { error: (error as Error).message });
+    }
   };
 
   const handleCommandCopy = (command: string) => {
@@ -385,12 +406,15 @@ const CountdownClock = () => {
               ntpSyncEnabled={ntpSyncEnabled}
               ntpSyncInterval={ntpSyncInterval}
               ntpDriftThreshold={ntpDriftThreshold}
+              serverPort={serverPort}
               setNtpSyncEnabled={setNtpSyncEnabled}
               setNtpSyncInterval={setNtpSyncInterval}
               setNtpDriftThreshold={setNtpDriftThreshold}
+              setServerPort={(p) => setServerPort(p)}
               onSetTimerTime={setTimerTime}
               onSetTimerName={setTimerName}
               onApplyNtpSettings={applyNtpSettings}
+              onApplyServerPort={applyServerPort}
             />
           </div>
         </TabsContent>
@@ -399,6 +423,7 @@ const CountdownClock = () => {
           <div className="p-6">
             <ApiInfoTab
               ipAddress={ipAddress}
+              serverPort={serverPort}
               onCommandCopy={handleCommandCopy}
             />
           </div>

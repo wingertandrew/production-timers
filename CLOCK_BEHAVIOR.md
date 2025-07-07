@@ -18,7 +18,6 @@ The clock keeps track of several pieces of state:
 - `isRunning` – Timer is actively counting down.
 - `isPaused` – Timer is paused but will resume from the same time.
 - `elapsedMinutes` / `elapsedSeconds` – Time elapsed in the current round.
-- `totalPausedTime` – Sum of all pause durations.
 - `isBetweenRounds` – Indicates the between‑rounds timer is running.
 
 All state changes are broadcast to every connected display via WebSocket so that all clients stay in sync.
