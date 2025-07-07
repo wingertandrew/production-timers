@@ -609,7 +609,7 @@ app.get('/api/docs', (req, res) => {
         "POST /api/timer/:id/pause": "Pause/Resume specific timer (1-5)",
         "POST /api/timer/:id/reset": "Reset specific timer (1-5)",
         "POST /api/timer/:id/adjust-time": {
-          description: "Adjust specific timer by seconds (only when stopped or paused)",
+          description: "Adjust specific timer by seconds during countdown",
           body: { seconds: "number (positive or negative)" }
         },
         "POST /api/timer/:id/set-time": {
@@ -630,6 +630,10 @@ app.get('/api/docs', (req, res) => {
         "POST /api/set-ntp-sync": {
           description: "Configure NTP sync settings",
           body: { enabled: "boolean", interval: "number (seconds)", driftThreshold: "number (milliseconds)" }
+        },
+        "POST /api/set-port": {
+          description: "Set HTTP server port",
+          body: { port: "number" }
         }
       },
       status: {
