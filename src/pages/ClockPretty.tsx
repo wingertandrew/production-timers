@@ -96,11 +96,18 @@ const ClockPretty = () => {
     return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
   };
 
-  const getStatusColor = (timer: SingleTimer) => {
-    if (timer.isPaused) return 'text-yellow-400';
-    if (timer.isRunning) return 'text-green-400';
-    if (timer.minutes === 0 && timer.seconds <= 10) return 'text-red-400';
-    return 'text-gray-400';
+  const getColorInfo = (timer: SingleTimer) => {
+    const remaining = timer.minutes * 60 + timer.seconds;
+    if (remaining <= 10) {
+      return { class: 'text-red-400', pulse: true };
+    }
+    if (remaining <= 20) {
+      return { class: 'text-yellow-400', pulse: false };
+    }
+    if (timer.isRunning && !timer.isPaused) {
+      return { class: 'text-green-400', pulse: false };
+    }
+    return { class: 'text-gray-400', pulse: false };
   };
 
   const getStatusText = (timer: SingleTimer) => {
@@ -125,7 +132,7 @@ const ClockPretty = () => {
           {clockData.timers.map((timer) => {
             const progress = getProgressPercentage(timer);
             const isActive = timer.id === clockData.activeTimerId;
-            const statusColor = getStatusColor(timer);
+            const colorInfo = getColorInfo(timer);
             
             return (
               <div
@@ -139,14 +146,16 @@ const ClockPretty = () => {
                   <div className={`text-4xl font-bold mb-2 ${isActive ? 'text-blue-400' : 'text-white'}`}>
                     TIMER {timer.id}
                   </div>
-                  <div className={`text-2xl font-bold ${statusColor}`}>
+                  <div className={`text-2xl font-bold ${colorInfo.class}`}>
                     {getStatusText(timer)}
                   </div>
                 </div>
 
                 {/* Main Time Display */}
                 <div className="text-center mb-6">
-                  <div className="text-8xl font-mono font-bold text-white mb-4">
+                  <div
+                    className={`text-8xl font-mono font-bold mb-4 ${colorInfo.class} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
+                  >
                     {formatTime(timer.minutes, timer.seconds)}
                   </div>
                   

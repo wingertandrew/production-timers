@@ -9,11 +9,18 @@ interface FloatingClockProps {
 }
 
 const FloatingClock: React.FC<FloatingClockProps> = ({ clockState, ntpSyncStatus }) => {
-  const getStatusColor = (timer: any) => {
-    if (timer.isPaused) return '#facc15'; // yellow-400
-    if (timer.isRunning) return '#22c55e'; // green-500
-    if (timer.minutes === 0 && timer.seconds <= 10) return '#ef4444'; // red-500
-    return '#6b7280'; // gray-500
+  const getColorInfo = (timer: any) => {
+    const remaining = timer.minutes * 60 + timer.seconds;
+    if (remaining <= 10) {
+      return { hex: '#ef4444', text: 'text-red-400', pulse: true };
+    }
+    if (remaining <= 20) {
+      return { hex: '#facc15', text: 'text-yellow-400', pulse: false };
+    }
+    if (timer.isRunning && !timer.isPaused) {
+      return { hex: '#22c55e', text: 'text-green-400', pulse: false };
+    }
+    return { hex: '#6b7280', text: 'text-gray-400', pulse: false };
   };
 
   const getStatusText = (timer: any) => {
@@ -40,8 +47,22 @@ const FloatingClock: React.FC<FloatingClockProps> = ({ clockState, ntpSyncStatus
         {/* Stacked Timers */}
         <div className="flex flex-col">
           {clockState.timers.map((timer) => {
-            const statusColor = getStatusColor(timer);
+            const colorInfo = getColorInfo(timer);
             const displayTime = formatTime(timer.minutes, timer.seconds);
+            const elapsedTime = formatTime(
+              timer.elapsedMinutes,
+              timer.elapsedSeconds
+            );
+            const progress = timer.initialTime
+              ?
+                  ((
+                    timer.initialTime.minutes * 60 +
+                      timer.initialTime.seconds -
+                      (timer.minutes * 60 + timer.seconds)
+                  ) /
+                    (timer.initialTime.minutes * 60 +
+                      timer.initialTime.seconds)) * 100
+              : 0;
             const isActive = timer.id === clockState.activeTimerId;
             
             return (
@@ -53,30 +74,34 @@ const FloatingClock: React.FC<FloatingClockProps> = ({ clockState, ntpSyncStatus
               >
                 <div className="flex items-center justify-between">
                   {/* Timer ID */}
-                  <div className={`text-lg font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
-                    {timer.id}
-                  </div>
-                  
+                  <div className={`text-lg font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>{timer.id}</div>
+
                   {/* Timer Time */}
-                  <div className={`text-lg font-mono font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
+                  <div
+                    className={`text-lg font-mono font-bold ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
+                  >
                     {displayTime}
                   </div>
-                  
+
                   {/* Status */}
-                  <div 
+                  <div
                     className="rounded px-2 py-1 text-xs font-bold text-black min-w-[24px] text-center"
-                    style={{ backgroundColor: statusColor }}
+                    style={{ backgroundColor: colorInfo.hex }}
                   >
                     {getStatusText(timer)}
                   </div>
                 </div>
-                
-                {/* Elapsed Time for Active Timer */}
-                {isActive && (
-                  <div className="text-gray-400 text-xs mt-1">
-                    Elapsed: {formatTime(timer.elapsedMinutes, timer.elapsedSeconds)}
+
+                {/* Elapsed & Progress */}
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`text-xs font-mono w-1/2 ${colorInfo.text}`}>{elapsedTime}</div>
+                  <div className="w-1/2 h-2 bg-gray-700 rounded">
+                    <div
+                      className="h-full rounded"
+                      style={{ width: `${progress}%`, backgroundColor: colorInfo.hex }}
+                    />
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
