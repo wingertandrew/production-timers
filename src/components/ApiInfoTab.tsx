@@ -15,6 +15,8 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
     await copyCommand(endpoint, onCommandCopy);
   };
 
+  const increments = [1, 5, 10, 15, 30];
+
   return (
     <div className="space-y-6 p-4 min-h-screen bg-gray-900">
       <Card className="bg-gray-800 border-gray-600">
@@ -154,48 +156,25 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                 
                 <div className="mt-6 p-4 bg-gray-800 rounded-lg">
                   <h4 className="text-xl font-bold text-white mb-3">Example Button Setup:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
-                    <div className="space-y-2">
-                      <h5 className="font-bold text-green-400">Timer 1 Controls:</h5>
-                      <div><strong>Start:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/start</code></div>
-                      <div><strong>Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/pause</code></div>
-                      <div><strong>Reset:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/reset</code></div>
-                    </div>
-                    <div className="space-y-2">
-                      <h5 className="font-bold text-blue-400">Timer 2 Controls:</h5>
-                      <div><strong>Start:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/2/start</code></div>
-                      <div><strong>Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/2/pause</code></div>
-                      <div><strong>Reset:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/2/reset</code></div>
-                    </div>
+                  <div className="space-y-2 text-gray-300">
+                    <div><strong>Start:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/start</code></div>
+                    <div><strong>Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/pause</code></div>
+                    <div><strong>Reset:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/reset</code></div>
                   </div>
                   <div className="mt-4 p-3 bg-blue-900/30 rounded">
-                    <p className="text-blue-300 font-bold">Each of the 5 timers (1-5) has identical API endpoints</p>
-                    <p className="text-gray-300 text-sm">Simply replace the timer ID in the URL: /api/timer/{1|2|3|4|5}/action</p>
+                    <p className="text-blue-300 font-bold">Each timer uses the same endpoint pattern.</p>
+                    <p className="text-gray-300 text-sm">Replace <code>{id}</code> with 1–5 for the desired timer.</p>
                   </div>
 
                   <div className="mt-6 p-4 bg-gray-800 rounded-lg">
                     <h4 className="text-xl font-bold text-white mb-3">Add Time Increments</h4>
                     <ul className="list-disc list-inside space-y-2 text-gray-300">
-                      <li>
-                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
-                        <span className="ml-2">seconds: 1</span>
-                      </li>
-                      <li>
-                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
-                        <span className="ml-2">seconds: 5</span>
-                      </li>
-                      <li>
-                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
-                        <span className="ml-2">seconds: 10</span>
-                      </li>
-                      <li>
-                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
-                        <span className="ml-2">seconds: 15</span>
-                      </li>
-                      <li>
-                        <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/1/adjust-time</code>
-                        <span className="ml-2">seconds: 30</span>
-                      </li>
+                      {increments.map(sec => (
+                        <li key={sec}>
+                          <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{id}/adjust-time</code>
+                          <span className="ml-2">seconds: {sec}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>

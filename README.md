@@ -66,31 +66,33 @@ Complete REST API for external timer control with discrete timer support:
 
 #### Individual Timer Control
 
-Start Timer 1:
+Use the timer ID (1-5) in place of `{id}` to control any timer.
+
+Start a timer:
 ```bash
-curl -X POST http://localhost:8080/api/timer/1/start
+curl -X POST http://localhost:8080/api/timer/{id}/start
 ```
 
-Pause Timer 2:
+Pause or resume a timer:
 ```bash
-curl -X POST http://localhost:8080/api/timer/2/pause
+curl -X POST http://localhost:8080/api/timer/{id}/pause
 ```
 
-Reset Timer 3:
+Reset a timer:
 ```bash
-curl -X POST http://localhost:8080/api/timer/3/reset
+curl -X POST http://localhost:8080/api/timer/{id}/reset
 ```
 
-Set Timer 4 to 10 minutes:
+Set a timer's duration:
 ```bash
-curl -X POST http://localhost:8080/api/timer/4/set-time \
+curl -X POST http://localhost:8080/api/timer/{id}/set-time \
   -H "Content-Type: application/json" \
   -d '{"minutes": 10, "seconds": 0}'
 ```
 
-Adjust Timer 5 by adding 30 seconds:
+Adjust the remaining time:
 ```bash
-curl -X POST http://localhost:8080/api/timer/5/adjust-time \
+curl -X POST http://localhost:8080/api/timer/{id}/adjust-time \
   -H "Content-Type: application/json" \
   -d '{"seconds": 30}'
 ```
