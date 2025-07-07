@@ -25,11 +25,18 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
   onResetTime,
   onAdjustTimeBySeconds
 }) => {
-  const getStatusColor = (timer: any) => {
-    if (timer.isPaused) return '#facc15'; // yellow-400
-    if (timer.isRunning) return '#22c55e'; // green-500
-    if (timer.minutes === 0 && timer.seconds <= 10) return '#ef4444'; // red-500
-    return '#6b7280'; // gray-500
+  const getColorInfo = (timer: any) => {
+    const remaining = timer.minutes * 60 + timer.seconds;
+    if (remaining <= 10) {
+      return { hex: '#ef4444', text: 'text-red-400', pulse: true };
+    }
+    if (remaining <= 20) {
+      return { hex: '#facc15', text: 'text-yellow-400', pulse: false };
+    }
+    if (timer.isRunning && !timer.isPaused) {
+      return { hex: '#22c55e', text: 'text-green-400', pulse: false };
+    }
+    return { hex: '#6b7280', text: 'text-gray-400', pulse: false };
   };
 
   const getStatusText = (timer: any) => {
@@ -81,9 +88,12 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
           {clockState.timers.map((timer) => {
             const progress = getProgressPercentage(timer);
             const isActive = timer.id === clockState.activeTimerId;
-            const statusColor = getStatusColor(timer);
+            const colorInfo = getColorInfo(timer);
             const displayTime = formatTime(timer.minutes, timer.seconds);
-            const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
+            const elapsedTime = formatTime(
+              timer.elapsedMinutes,
+              timer.elapsedSeconds
+            );
             
             return (
               <div
@@ -100,7 +110,9 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                   
                   {/* Timer Display with Elapsed/Remaining */}
                   <div className="flex-1 text-center">
-                    <div className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-mono font-bold tracking-wider text-white">
+                    <div
+                      className={`text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-mono font-bold tracking-wider ${colorInfo.text} ${colorInfo.pulse ? 'urgent-pulse' : ''}`}
+                    >
                       {displayTime}
                     </div>
                     <div className="flex justify-center gap-6 mt-2 text-lg md:text-xl lg:text-2xl font-mono">
@@ -110,16 +122,13 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
                   </div>
                   
                   {/* Status - Smaller */}
-                  <div 
+                  <div
                     className={`rounded-lg p-2 min-w-[120px] ${
-                      timer.isRunning && 
-                      !timer.isPaused && 
-                      timer.minutes === 0 && 
-                      timer.seconds <= 10 
-                        ? 'urgent-pulse' 
+                      timer.isRunning && !timer.isPaused && colorInfo.pulse
+                        ? 'urgent-pulse'
                         : ''
-                    }`} 
-                    style={{ backgroundColor: statusColor }}
+                    }`}
+                    style={{ backgroundColor: colorInfo.hex }}
                   >
                     <div className="flex items-center gap-2 text-black text-sm font-bold justify-center">
                       {timer.isRunning && !timer.isPaused ? (
