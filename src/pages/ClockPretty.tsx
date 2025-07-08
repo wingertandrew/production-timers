@@ -39,6 +39,47 @@ const ClockPretty = () => {
     clockPrettyHeader: 'TIMER OVERVIEW'
   });
 
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    // Calculate and apply dynamic scaling
+    const calculateScale = () => {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      // Base dimensions for 1920x1080 design
+      const baseWidth = 1920;
+      const baseHeight = 1080;
+      
+      // Calculate scale factors for width and height
+      const scaleX = windowWidth / baseWidth;
+      const scaleY = windowHeight / baseHeight;
+      
+      // Use the smaller scale to ensure content fits in both dimensions
+      const newScale = Math.min(scaleX, scaleY, 1); // Cap at 1 to prevent upscaling
+      
+      // Set minimum scale to keep content readable
+      const minScale = 0.4;
+      setScale(Math.max(newScale, minScale));
+    };
+
+    // Calculate initial scale
+    calculateScale();
+
+    // Debounced resize handler
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(calculateScale, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
+  }, []);
+
   useEffect(() => {
     // Connect to WebSocket for real-time updates
     const connectWebSocket = () => {
@@ -82,22 +123,30 @@ const ClockPretty = () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getElapsedPercentage = (timer: SingleTimer) => {
+  // Fixed progress calculation to match main display
+  const getProgressPercentage = (timer: SingleTimer) => {
     if (!timer.initialTime) return 0;
-    const totalInitialSeconds =
-      timer.initialTime.minutes * 60 + timer.initialTime.seconds;
-    const elapsedSeconds = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
+    
+    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
+    const remainingSeconds = timer.minutes * 60 + timer.seconds;
+    
     if (totalInitialSeconds === 0) return 0;
-    return Math.min((elapsedSeconds / totalInitialSeconds) * 100, 100);
+    
+    // Calculate progress as (initial - remaining) / initial * 100
+    const progressSeconds = totalInitialSeconds - remainingSeconds;
+    return Math.min((progressSeconds / totalInitialSeconds) * 100, 100);
   };
 
+  // Updated progress color to match main display behavior
   const getProgressColor = (timer: SingleTimer) => {
+    if (!timer.isRunning) return 'bg-gray-600'; // Gray when not running
+    if (timer.isPaused) return 'bg-orange-600'; // Orange when paused
+    
     const remaining = timer.minutes * 60 + timer.seconds;
-    if (timer.isPaused) return 'bg-orange-600';
-    if (!timer.isRunning) return 'bg-gray-600';
-    if (remaining <= 10) return 'bg-red-600';
-    if (remaining <= 20) return 'bg-yellow-500';
-    return 'bg-green-600';
+    if (remaining <= 10) return 'bg-red-600'; // Red in last 10 seconds
+    if (remaining <= 20) return 'bg-yellow-500'; // Yellow in last 20 seconds
+    
+    return 'bg-green-600'; // Green when running normally
   };
 
   const getTimerBackgroundColor = (timer: SingleTimer) => {
@@ -130,73 +179,85 @@ const ClockPretty = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-6xl font-bold text-white mb-4">
-            {clockData.clockPrettyHeader || 'TIMER OVERVIEW'}
-          </h1>
-          <div className="text-2xl text-gray-400">
-            Active Timer: {clockData.activeTimerId}
+    <div className="min-h-screen bg-black text-white overflow-hidden">
+      <div 
+        className="origin-top-left transition-transform duration-300 ease-out"
+        style={{ 
+          transform: `scale(${scale})`,
+          width: '1920px',
+          height: '1080px'
+        }}
+      >
+        <div className="max-w-7xl mx-auto p-8 h-full">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-6xl font-bold text-white mb-4">
+              {clockData.clockPrettyHeader || 'TIMER OVERVIEW'}
+            </h1>
+            <div className="text-2xl text-gray-400">
+              Active Timer: {clockData.activeTimerId}
+            </div>
           </div>
-        </div>
 
-        {/* All Timers - Horizontal Lines */}
-        <div className="space-y-4">
-          {clockData.timers.map((timer) => {
-            const progress = getElapsedPercentage(timer);
-            const isActive = timer.id === clockData.activeTimerId;
-            const backgroundColorClass = getTimerBackgroundColor(timer);
-            const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
-            const remainingTime = formatTime(timer.minutes, timer.seconds);
-            
-            return (
-              <div
-                key={timer.id}
-                className={`${backgroundColorClass} border-2 ${
-                  isActive ? 'border-blue-500' : 'border-gray-700'
-                } rounded-xl p-6 transition-all`}
-              >
-                <div className="flex items-center gap-8 h-32">
-                  {/* Timer ID and Name */}
-                  <div className="min-w-[200px] flex flex-col justify-center">
-                    <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
-                      {timer.name || `Timer ${timer.id}`}
+          {/* All Timers - Horizontal Lines */}
+          <div className="space-y-4">
+            {clockData.timers.map((timer) => {
+              const progress = getProgressPercentage(timer);
+              const isActive = timer.id === clockData.activeTimerId;
+              const backgroundColorClass = getTimerBackgroundColor(timer);
+              const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
+              const remainingTime = formatTime(timer.minutes, timer.seconds);
+              
+              return (
+                <div
+                  key={timer.id}
+                  className={`${backgroundColorClass} border-2 ${
+                    isActive ? 'border-blue-500' : 'border-gray-700'
+                  } rounded-xl p-6 transition-all`}
+                >
+                  <div className="flex items-center gap-8 h-32">
+                    {/* Timer ID and Name */}
+                    <div className="min-w-[200px] flex flex-col justify-center">
+                      <div className={`text-3xl font-bold ${isActive ? 'text-blue-400' : 'text-white'}`}>
+                        {timer.name || `Timer ${timer.id}`}
+                      </div>
+                      <div className={`text-lg font-medium ${getStatusColor(timer)}`}>
+                        {getStatusText(timer)}
+                      </div>
                     </div>
-                    <div className={`text-lg font-medium ${getStatusColor(timer)}`}>
-                      {getStatusText(timer)}
+
+                    {/* Times - Elapsed and Remaining */}
+                    <div className="flex-1 flex justify-center gap-12 items-center h-full">
+                      <div className="text-center">
+                        <div className="text-sm text-gray-400 mb-2">ELAPSED</div>
+                        <div className="text-8xl font-mono text-green-400">+{elapsedTime}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-400 mb-2">REMAINING</div>
+                        <div className="text-8xl font-mono text-red-400">-{remainingTime}</div>
+                      </div>
                     </div>
+
+                    {/* Spacer to align progress bar */}
+                    <div className="flex-1" />
                   </div>
 
-                  {/* Times - Elapsed and Remaining - 80% of vertical space */}
-                  <div className="flex-1 flex justify-center gap-12 items-center h-full">
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-2">ELAPSED</div>
-                      <div className="text-8xl font-mono text-green-400">+{elapsedTime}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-400 mb-2">REMAINING</div>
-                      <div className="text-8xl font-mono text-red-400">-{remainingTime}</div>
+                  {/* Progress Bar Below - with smooth animation matching main display */}
+                  <div className="mt-4">
+                    <div className="w-full h-6 bg-gray-700 rounded overflow-hidden">
+                      <div
+                        className={`h-full rounded transition-all duration-1000 ease-linear ${getProgressColor(timer)}`}
+                        style={{ 
+                          width: `${progress}%`,
+                          transition: timer.isRunning ? 'width 1s linear' : 'width 0.3s ease-out'
+                        }}
+                      />
                     </div>
                   </div>
-
-                  {/* Spacer to align progress bar */}
-                  <div className="flex-1" />
                 </div>
-
-                {/* Progress Bar Below - with dynamic animation */}
-                <div className="mt-4">
-                  <div className="w-full h-6 bg-gray-700 rounded">
-                    <div
-                      className={`h-full rounded transition-all duration-1000 ease-linear ${getProgressColor(timer)}`}
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
