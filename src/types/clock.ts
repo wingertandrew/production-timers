@@ -19,6 +19,7 @@ export interface ClockState {
   ntpSyncInterval: number;
   ntpDriftThreshold: number;
   ntpOffset: number;
+  port?: number;
   masterClockStartTime?: number;
   ntpTimestamp?: number | null;
   serverTime?: number;

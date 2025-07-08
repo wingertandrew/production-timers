@@ -17,6 +17,8 @@ interface SettingsTabProps {
   onSetTimerTime: (timerId: number, minutes: number, seconds: number) => void;
   onSetTimerName: (timerId: number, name: string) => void;
   onApplyNtpSettings: () => void;
+  serverPort: number;
+  onSetServerPort: (port: number) => void;
 }
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -29,7 +31,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   setNtpDriftThreshold,
   onSetTimerTime,
   onSetTimerName,
-  onApplyNtpSettings
+  onApplyNtpSettings,
+  serverPort,
+  onSetServerPort
 }) => {
   const [nameValues, setNameValues] = useState<Record<number, string>>(() => {
     const vals: Record<number, string> = {};
@@ -40,6 +44,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
   });
 
   const [headerText, setHeaderText] = useState(clockState.clockPrettyHeader || 'TIMER OVERVIEW');
+  const [portValue, setPortValue] = useState<number>(serverPort);
 
   useEffect(() => {
     setNameValues(prev => {
@@ -200,6 +205,31 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Server Port Setting */}
+          <Card className="bg-gray-700 border-gray-500">
+            <CardHeader>
+              <CardTitle className="text-2xl text-white flex items-center gap-3">
+                <Server className="w-8 h-8" />
+                Server Port
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Input
+                  type="number"
+                  min="1"
+                  max="65535"
+                  value={portValue}
+                  onChange={(e) => setPortValue(parseInt(e.target.value) || 0)}
+                  className="h-12 bg-gray-700 border-gray-500 text-center text-white text-lg font-bold rounded-lg w-32"
+                />
+                <Button onClick={() => onSetServerPort(portValue)} className="h-12 bg-gray-400 hover:bg-gray-300 text-black rounded-lg">
+                  Save
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
