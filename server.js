@@ -15,6 +15,12 @@ app.use(express.json());
 let server = http.createServer(app);
 let wss = new WebSocketServer({ server });
 
+function initWebSocketServer() {
+  wss.on('connection', handleWsConnection);
+}
+initWebSocketServer();
+
+
 // Server-side timer state
 const createInitialTimer = (id) => ({
   id,
@@ -274,7 +280,7 @@ function updateServerTimer(timerId) {
   }
 }
 
-wss.on('connection', ws => {
+function handleWsConnection(ws) {
   console.log('New WebSocket connection established');
   const clientInfo = {
     id: Math.random().toString(36).slice(2),
@@ -349,7 +355,7 @@ wss.on('connection', ws => {
     connectedClients.delete(ws);
     broadcastClients();
   });
-});
+}
 
 // Timer-specific API endpoints
 app.post('/api/timer/:id/start', (req, res) => {
@@ -586,12 +592,18 @@ app.post('/api/set-port', (req, res) => {
     connectedClients.clear();
     server = http.createServer(app);
     wss = new WebSocketServer({ server });
-    startServer(newPort).then(() => {
-      broadcast({ type: 'status', ...serverClockState });
-    });
+server.close(() => {
+  wss.close();
+  connectedClients.clear();
+  server = http.createServer(app);
+  wss = new WebSocketServer({ server });
+  initWebSocketServer();
+  startServer(newPort).then(() => {
+    broadcast({ type: 'status', ...serverClockState });
+    res.json({ success: true });
   });
+});
 
-  res.json({ success: true });
 });
 
 app.get('/api/ntp-sync', async (req, res) => {
