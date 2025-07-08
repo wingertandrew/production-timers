@@ -60,7 +60,7 @@ Complete REST API for external timer control with discrete timer support:
 ### Web Interface
 1. **Display Tab**: Main timer display showing all 5 timers vertically stacked
 2. **Timers Tab**: Individual timer cards with controls
-3. **Settings Tab**: Configure individual timer durations and NTP settings
+3. **Settings Tab**: Configure individual timer durations, NTP settings, and server port
 4. **API Info Tab**: API endpoint documentation and examples
 5. **Debug Tab**: System logs and connection status
 

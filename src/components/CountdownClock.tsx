@@ -33,7 +33,10 @@ const CountdownClock = () => {
     ntpSyncEnabled: false,
     ntpSyncInterval: 21600000,
     ntpDriftThreshold: 50,
-    ntpOffset: 0
+    ntpOffset: 0,
+    port: typeof window !== 'undefined' && window.location.port
+      ? parseInt(window.location.port)
+      : 8080
   });
 
   const [inputMinutes, setInputMinutes] = useState(5);
@@ -221,6 +224,12 @@ const CountdownClock = () => {
         break;
       case 'adjust-time':
         break;
+      case 'set-port':
+        toast({ title: `Server moved to port ${command.port}` });
+        setTimeout(() => {
+          window.location.href = `${window.location.protocol}//${window.location.hostname}:${command.port}`;
+        }, 500);
+        break;
     }
   };
 
@@ -342,6 +351,22 @@ const CountdownClock = () => {
     toast({ title: "NTP Settings Applied" });
   };
 
+  const changeServerPort = async (port: number) => {
+    try {
+      await fetch('/api/set-port', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port })
+      });
+    } catch (error) {
+      addDebugLog('UI', 'Failed to change server port', { error });
+      return;
+    }
+
+    toast({ title: `Server port changed to ${port}` });
+    window.location.href = `${window.location.protocol}//${window.location.hostname}:${port}`;
+  };
+
   const handleCommandCopy = (command: string) => {
     addDebugLog('UI', 'Command copied', { command });
     toast({ title: 'Command Copied', description: command });
@@ -398,6 +423,8 @@ const CountdownClock = () => {
               onSetTimerTime={setTimerTime}
               onSetTimerName={setTimerName}
               onApplyNtpSettings={applyNtpSettings}
+              serverPort={clockState.port || 8080}
+              onSetServerPort={changeServerPort}
             />
           </div>
         </TabsContent>

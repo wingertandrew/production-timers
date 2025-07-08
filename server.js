@@ -12,8 +12,8 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(express.json());
 
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+let server = http.createServer(app);
+let wss = new WebSocketServer({ server });
 
 // Server-side timer state
 const createInitialTimer = (id) => ({
@@ -39,11 +39,13 @@ let serverClockState = {
   ntpSyncEnabled: false,
   ntpOffset: 0,
   ntpSyncInterval: Number(process.env.NTP_SYNC_INTERVAL) || 1800000,
-  ntpDriftThreshold: Number(process.env.NTP_DRIFT_THRESHOLD) || 50
+  ntpDriftThreshold: Number(process.env.NTP_DRIFT_THRESHOLD) || 50,
+  port: Number(process.env.PORT) || 8080
 };
 
 let serverTimers = {};
 let ntpSyncTimer = null;
+let currentPort = serverClockState.port;
 
 // Track connected WebSocket clients
 const connectedClients = new Map();
@@ -177,6 +179,18 @@ function stopNtpSync() {
     clearInterval(ntpSyncTimer);
     ntpSyncTimer = null;
   }
+}
+
+function startServer(port) {
+  return new Promise(resolve => {
+    server.listen(port, () => {
+      currentPort = port;
+      serverClockState.port = port;
+      console.log(`Server listening on http://localhost:${port}`);
+      console.log(`API Documentation: http://localhost:${port}/api/docs`);
+      resolve();
+    });
+  });
 }
 
 function startServerTimer(timerId) {
@@ -554,6 +568,32 @@ app.post('/api/set-ntp-sync', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/set-port', (req, res) => {
+  const newPort = parseInt(req.body.port);
+  if (!newPort) {
+    return res.status(400).json({ error: 'Invalid port' });
+  }
+  if (newPort === currentPort) {
+    return res.json({ success: true });
+  }
+
+  console.log(`API: Change server port to ${newPort}`);
+  serverClockState.port = newPort;
+  broadcast({ action: 'set-port', port: newPort });
+
+  server.close(() => {
+    wss.close();
+    connectedClients.clear();
+    server = http.createServer(app);
+    wss = new WebSocketServer({ server });
+    startServer(newPort).then(() => {
+      broadcast({ type: 'status', ...serverClockState });
+    });
+  });
+
+  res.json({ success: true });
+});
+
 app.get('/api/ntp-sync', async (req, res) => {
   if (req.query.server) {
     process.env.NTP_SERVER = String(req.query.server);
@@ -675,10 +715,7 @@ app.get('*', (_req, res) => {
   res.sendFile(join(dist, 'index.html'));
 });
 
-const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-  console.log(`API Documentation: http://localhost:${PORT}/api/docs`);
+startServer(serverClockState.port).then(() => {
   console.log('Multi-timer server initialized with 5 discrete timers');
   broadcastClients();
   if (serverClockState.ntpSyncEnabled) {
