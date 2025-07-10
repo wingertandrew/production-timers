@@ -592,17 +592,12 @@ app.post('/api/set-port', (req, res) => {
     connectedClients.clear();
     server = http.createServer(app);
     wss = new WebSocketServer({ server });
-server.close(() => {
-  wss.close();
-  connectedClients.clear();
-  server = http.createServer(app);
-  wss = new WebSocketServer({ server });
-  initWebSocketServer();
-  startServer(newPort).then(() => {
-    broadcast({ type: 'status', ...serverClockState });
-    res.json({ success: true });
+    initWebSocketServer();
+    startServer(newPort).then(() => {
+      broadcast({ type: 'status', ...serverClockState });
+      res.json({ success: true });
+    });
   });
-});
 
 });
 
