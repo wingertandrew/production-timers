@@ -85,6 +85,15 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                   </div>
                   <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
                     <div>
+                      <code className="text-lg text-yellow-300 font-bold">POST /api/timer/{'{id}'}/play-pause</code>
+                      <p className="text-gray-300 text-sm mt-1">Toggle play/pause for timer <code>{'{id}'}</code></p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleCopyCommand('/api/timer/{id}/play-pause')} className="h-12 w-12">
+                      <Copy className="w-6 h-6 text-white" />
+                    </Button>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-xl flex justify-between items-center">
+                    <div>
                       <code className="text-lg text-yellow-300 font-bold">POST /api/timer/{'{id}'}/pause</code>
                       <p className="text-gray-300 text-sm mt-1">Pause/Resume timer <code>{'{id}'}</code></p>
                     </div>
@@ -176,6 +185,7 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                 <div className="mt-6 p-4 bg-gray-800 rounded-lg">
                   <h4 className="text-xl font-bold text-white mb-3">Example Button Setup:</h4>
                   <div className="space-y-2 text-gray-300">
+                    <div><strong>Play/Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/play-pause</code></div>
                     <div><strong>Start:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/start</code></div>
                     <div><strong>Pause:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/pause</code></div>
                     <div><strong>Reset:</strong> <code className="bg-gray-900 px-2 py-1 rounded text-sm">POST /api/timer/{'{id}'}/reset</code></div>

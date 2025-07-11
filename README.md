@@ -29,6 +29,7 @@ Complete REST API for external timer control with discrete timer support:
 
 #### Individual Timer Operations
 - `POST /api/timer/{id}/start` - Start a specific timer (1-5)
+- `POST /api/timer/{id}/play-pause` - Toggle play/pause for a specific timer (1-5)
 - `POST /api/timer/{id}/pause` - Pause/resume a specific timer (1-5)
 - `POST /api/timer/{id}/reset` - Reset a specific timer (1-5)
 - `POST /api/timer/{id}/set-time` - Set timer duration (minutes, seconds)
@@ -75,9 +76,9 @@ Start a timer:
 curl -X POST http://localhost:8080/api/timer/{id}/start
 ```
 
-Pause or resume a timer:
+Play or pause a timer with one command:
 ```bash
-curl -X POST http://localhost:8080/api/timer/{id}/pause
+curl -X POST http://localhost:8080/api/timer/{id}/play-pause
 ```
 
 Reset a timer:
@@ -113,6 +114,7 @@ Common increments for Companion integration:
 - `POST /api/timer/{id}/adjust-time` body `{ "seconds": 10 }`
 - `POST /api/timer/{id}/adjust-time` body `{ "seconds": 15 }`
 - `POST /api/timer/{id}/adjust-time` body `{ "seconds": 30 }`
+- `POST /api/timer/{id}/play-pause` - Toggle play/pause
 
 #### System Operations
 
