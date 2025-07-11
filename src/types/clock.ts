@@ -15,31 +15,16 @@ export interface SingleTimer {
 export interface ClockState {
   timers: SingleTimer[];
   activeTimerId: number | null;
-  ntpSyncEnabled: boolean;
-  ntpSyncInterval: number;
-  ntpDriftThreshold: number;
-  ntpOffset: number;
   port?: number;
   masterClockStartTime?: number;
-  ntpTimestamp?: number | null;
-  serverTime?: number;
   clockPrettyHeader?: string;
 }
 
 export interface DebugLogEntry {
   timestamp: string;
-  source: 'UI' | 'API' | 'WEBSOCKET' | 'NTP';
+  source: 'UI' | 'API' | 'WEBSOCKET';
   action: string;
   details?: any;
 }
 
-export type DebugFilter = 'ALL' | 'UI' | 'API' | 'WEBSOCKET' | 'NTP';
-
-export interface NTPSyncStatus {
-  enabled: boolean;
-  lastSync: number;
-  timeOffset: number;
-  healthy: boolean;
-  syncCount: number;
-  errorCount: number;
-}
+export type DebugFilter = 'ALL' | 'UI' | 'API' | 'WEBSOCKET';

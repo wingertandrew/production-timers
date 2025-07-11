@@ -146,10 +146,6 @@ const ApiInfoTab: React.FC<ApiInfoTabProps> = ({ ipAddress, onCommandCopy }) => 
                   <code className="text-2xl text-cyan-300 font-bold">GET /api/status</code>
                   <p className="text-gray-300 mt-2">Get status of all 5 timers and system state</p>
                 </div>
-                <div className="bg-gray-700 p-6 rounded-xl">
-                  <code className="text-2xl text-purple-300 font-bold">POST /api/set-ntp-sync</code>
-                  <p className="text-gray-300 mt-2">Configure NTP synchronization settings</p>
-                </div>
                 <div className="bg-gray-700 p-6 rounded-xl flex justify-between items-center">
                   <div>
                     <code className="text-2xl text-blue-300 font-bold">POST /api/set-port</code>
