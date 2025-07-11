@@ -55,6 +55,17 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
     return 'bg-gray-900';
   };
 
+  const getProgressColor = (timer: any) => {
+    if (!timer.isRunning) return 'bg-gray-600';
+    if (timer.isPaused) return 'bg-orange-600';
+
+    const remaining = timer.minutes * 60 + timer.seconds;
+    if (remaining <= 10) return 'bg-red-600';
+    if (remaining <= 20) return 'bg-yellow-500';
+
+    return 'bg-green-600';
+  };
+
   const startEdit = (timer: any) => {
     setEditingTimer(timer.id);
     setEditMinutes(timer.initialTime.minutes);
@@ -114,10 +125,11 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
           {clockState.timers.map((timer) => {
             const displayTime = formatTime(timer.minutes, timer.seconds);
             const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
-            const progress = timer.initialTime
-              ? ((timer.initialTime.minutes * 60 + timer.initialTime.seconds - (timer.minutes * 60 + timer.seconds)) /
-                 (timer.initialTime.minutes * 60 + timer.initialTime.seconds)) * 100
-              : 0;
+
+            const remainingSeconds = timer.minutes * 60 + timer.seconds;
+            const elapsedSecs = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
+            const totalTime = remainingSeconds + elapsedSecs;
+            const progress = totalTime > 0 ? Math.min((elapsedSecs / totalTime) * 100, 100) : 0;
             const isActive = timer.id === clockState.activeTimerId;
             const isEditing = editingTimer === timer.id;
             const isEditingName = editingName === timer.id;
@@ -253,12 +265,12 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
 
                   {/* Progress Bar with dynamic countdown animation */}
                   <div className="mt-4">
-                    <div className="w-full h-4 bg-gray-700 rounded">
+                    <div className="w-full h-4 bg-gray-700 rounded overflow-hidden">
                       <div
-                        className="h-full rounded transition-all duration-1000 ease-linear"
-                        style={{ 
-                          width: `${progress}%`, 
-                          backgroundColor: timer.isRunning && !timer.isPaused ? '#22c55e' : '#6b7280'
+                        className={`h-full rounded transition-all duration-1000 ease-linear ${getProgressColor(timer)}`}
+                        style={{
+                          width: `${progress}%`,
+                          transition: timer.isRunning ? 'width 1s linear' : 'width 0.3s ease-out'
                         }}
                       />
                     </div>
