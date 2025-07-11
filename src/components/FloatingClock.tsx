@@ -78,11 +78,10 @@ const FloatingClock: React.FC = () => {
   };
 
   const getProgressPercentage = (timer: SingleTimer) => {
-    if (!timer.initialTime) return 0;
-    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
     const remainingSeconds = timer.minutes * 60 + timer.seconds;
-    const elapsedSeconds = totalInitialSeconds - remainingSeconds;
-    return totalInitialSeconds > 0 ? (elapsedSeconds / totalInitialSeconds) * 100 : 0;
+    const elapsedSeconds = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
+    const totalTime = remainingSeconds + elapsedSeconds;
+    return totalTime > 0 ? Math.min((elapsedSeconds / totalTime) * 100, 100) : 0;
   };
 
   const getTimerColor = (timer: SingleTimer) => {

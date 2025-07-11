@@ -122,27 +122,12 @@ const ClockPretty = () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Updated progress calculation to handle dynamic scaling when time is added
+  // Progress calculation dynamically scales with added time
   const getProgressPercentage = (timer: SingleTimer) => {
-    if (!timer.initialTime) return 0;
-    
     const remainingSeconds = timer.minutes * 60 + timer.seconds;
     const elapsedSeconds = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
-    
-    // If timer is not running and has remaining time, calculate based on current state
-    if (!timer.isRunning && remainingSeconds > 0) {
-      const totalTime = remainingSeconds + elapsedSeconds;
-      if (totalTime === 0) return 0;
-      return Math.min((elapsedSeconds / totalTime) * 100, 100);
-    }
-    
-    // For running timers, use the original initial time as reference
-    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
-    if (totalInitialSeconds === 0) return 0;
-    
-    // Calculate progress as (initial - remaining) / initial * 100
-    const progressSeconds = totalInitialSeconds - remainingSeconds;
-    return Math.min((progressSeconds / totalInitialSeconds) * 100, 100);
+    const totalTime = remainingSeconds + elapsedSeconds;
+    return totalTime > 0 ? Math.min((elapsedSeconds / totalTime) * 100, 100) : 0;
   };
 
   // Updated progress color to match main display behavior
