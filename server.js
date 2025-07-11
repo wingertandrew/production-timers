@@ -321,7 +321,7 @@ app.post('/api/timer/:id/play-pause', (req, res) => {
     timer.isPaused = false;
     timer.pauseStartTime = null;
     timer.currentPauseDuration = 0;
-    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    timer.lastUpdateTime = Date.now();
     startServerTimer(timerId);
     broadcast({ action: 'start', timerId });
   } else {
@@ -332,11 +332,11 @@ app.post('/api/timer/:id/play-pause', (req, res) => {
       timer.isPaused = false;
       timer.pauseStartTime = null;
       timer.currentPauseDuration = 0;
-      timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+      timer.lastUpdateTime = Date.now();
       broadcast({ action: 'pause', timerId });
     } else {
       timer.isPaused = true;
-      timer.pauseStartTime = Date.now() + serverClockState.ntpOffset;
+      timer.pauseStartTime = Date.now();
       timer.lastUpdateTime = timer.pauseStartTime;
       broadcast({ action: 'pause', timerId });
     }
