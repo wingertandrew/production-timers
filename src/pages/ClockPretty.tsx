@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 interface SingleTimer {
@@ -121,13 +122,22 @@ const ClockPretty = () => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Fixed progress calculation to match main display
+  // Updated progress calculation to handle dynamic scaling when time is added
   const getProgressPercentage = (timer: SingleTimer) => {
     if (!timer.initialTime) return 0;
     
-    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
     const remainingSeconds = timer.minutes * 60 + timer.seconds;
+    const elapsedSeconds = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
     
+    // If timer is not running and has remaining time, calculate based on current state
+    if (!timer.isRunning && remainingSeconds > 0) {
+      const totalTime = remainingSeconds + elapsedSeconds;
+      if (totalTime === 0) return 0;
+      return Math.min((elapsedSeconds / totalTime) * 100, 100);
+    }
+    
+    // For running timers, use the original initial time as reference
+    const totalInitialSeconds = timer.initialTime.minutes * 60 + timer.initialTime.seconds;
     if (totalInitialSeconds === 0) return 0;
     
     // Calculate progress as (initial - remaining) / initial * 100
@@ -192,7 +202,6 @@ const ClockPretty = () => {
             <h1 className="text-6xl font-bold text-white mb-4">
               {clockData.clockPrettyHeader || 'TIMER OVERVIEW'}
             </h1>
-            {/* Active timer label removed */}
           </div>
 
           {/* All Timers - Horizontal Lines */}
