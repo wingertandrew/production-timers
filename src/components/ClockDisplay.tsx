@@ -114,10 +114,24 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
           {clockState.timers.map((timer) => {
             const displayTime = formatTime(timer.minutes, timer.seconds);
             const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
-            const progress = timer.initialTime
-              ? ((timer.initialTime.minutes * 60 + timer.initialTime.seconds - (timer.minutes * 60 + timer.seconds)) /
-                 (timer.initialTime.minutes * 60 + timer.initialTime.seconds)) * 100
-              : 0;
+
+            const remainingSeconds = timer.minutes * 60 + timer.seconds;
+            const elapsedSecs = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
+            let progress = 0;
+
+            if (!timer.isRunning && remainingSeconds > 0) {
+              const totalTime = remainingSeconds + elapsedSecs;
+              if (totalTime > 0) {
+                progress = Math.min((elapsedSecs / totalTime) * 100, 100);
+              }
+            } else if (timer.initialTime) {
+              const totalInitialSeconds =
+                timer.initialTime.minutes * 60 + timer.initialTime.seconds;
+              if (totalInitialSeconds > 0) {
+                const progressSeconds = totalInitialSeconds - remainingSeconds;
+                progress = Math.min((progressSeconds / totalInitialSeconds) * 100, 100);
+              }
+            }
             const isActive = timer.id === clockState.activeTimerId;
             const isEditing = editingTimer === timer.id;
             const isEditingName = editingName === timer.id;
