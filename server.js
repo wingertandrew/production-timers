@@ -297,6 +297,54 @@ app.post('/api/timer/:id/pause', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/timer/:id/play-pause', (req, res) => {
+  const timerId = parseInt(req.params.id);
+  const timer = serverClockState.timers.find(t => t.id === timerId);
+
+  if (!timer) {
+    return res.status(404).json({ error: 'Timer not found' });
+  }
+
+  console.log(`API: Play/Pause toggle timer ${timerId}`);
+
+  if (!timer.isRunning) {
+    if (!timer.isRunning) {
+      timer.startTime = {
+        minutes: timer.minutes,
+        seconds: timer.seconds
+      };
+    }
+    if (timer.isPaused && timer.pauseStartTime) {
+      timer.currentPauseDuration = 0;
+    }
+    timer.isRunning = true;
+    timer.isPaused = false;
+    timer.pauseStartTime = null;
+    timer.currentPauseDuration = 0;
+    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    startServerTimer(timerId);
+    broadcast({ action: 'start', timerId });
+  } else {
+    if (timer.isPaused) {
+      if (timer.pauseStartTime) {
+        timer.currentPauseDuration = 0;
+      }
+      timer.isPaused = false;
+      timer.pauseStartTime = null;
+      timer.currentPauseDuration = 0;
+      timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+      broadcast({ action: 'pause', timerId });
+    } else {
+      timer.isPaused = true;
+      timer.pauseStartTime = Date.now() + serverClockState.ntpOffset;
+      timer.lastUpdateTime = timer.pauseStartTime;
+      broadcast({ action: 'pause', timerId });
+    }
+  }
+
+  res.json({ success: true });
+});
+
 app.post('/api/timer/:id/reset', (req, res) => {
   const timerId = parseInt(req.params.id);
   const timer = serverClockState.timers.find(t => t.id === timerId);
@@ -509,6 +557,7 @@ app.get('/api/docs', (req, res) => {
     endpoints: {
       timer_control: {
         "POST /api/timer/:id/start": "Start specific timer (1-5)",
+        "POST /api/timer/:id/play-pause": "Toggle play/pause for specific timer (1-5)",
         "POST /api/timer/:id/pause": "Pause/Resume specific timer (1-5)",
         "POST /api/timer/:id/reset": "Reset specific timer (1-5)",
         "POST /api/timer/:id/adjust-time": {
@@ -552,6 +601,7 @@ app.get('/api/docs', (req, res) => {
     },
     timer_examples: {
       start_timer_1: `curl -X POST http://${req.get('host')}/api/timer/1/start`,
+      play_pause_timer_1: `curl -X POST http://${req.get('host')}/api/timer/1/play-pause`,
       pause_timer_2: `curl -X POST http://${req.get('host')}/api/timer/2/pause`,
       reset_timer_3: `curl -X POST http://${req.get('host')}/api/timer/3/reset`,
       set_timer_4_time: `curl -X POST http://${req.get('host')}/api/timer/4/set-time -H "Content-Type: application/json" -d '{"minutes":10,"seconds":0}'`,
