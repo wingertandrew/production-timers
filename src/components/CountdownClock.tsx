@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Info, Server, Bug } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ClockState, SingleTimer, NTPSyncStatus } from '@/types/clock';
+import { ClockState, SingleTimer } from '@/types/clock';
 import { useDebugLog } from '@/hooks/useDebugLog';
-import { NTPSyncManager, DEFAULT_NTP_CONFIG } from '@/utils/ntpSync';
 
 import ClockDisplay from './ClockDisplay';
 import SettingsTab from './SettingsTab';
@@ -30,10 +29,7 @@ const CountdownClock = () => {
   const [clockState, setClockState] = useState<ClockState>({
     timers: Array.from({ length: 5 }, (_, i) => createInitialTimer(i + 1)),
     activeTimerId: 1,
-    ntpSyncEnabled: false,
-    ntpSyncInterval: 21600000,
-    ntpDriftThreshold: 50,
-    ntpOffset: 0,
+    clockPrettyHeader: 'TIMER OVERVIEW',
     port: typeof window !== 'undefined' && window.location.port
       ? parseInt(window.location.port)
       : 8080
@@ -41,24 +37,12 @@ const CountdownClock = () => {
 
   const [inputMinutes, setInputMinutes] = useState(5);
   const [inputSeconds, setInputSeconds] = useState(0);
-  const [ntpSyncEnabled, setNtpSyncEnabled] = useState(false);
-  const [ntpSyncInterval, setNtpSyncInterval] = useState(21600000);
-  const [ntpDriftThreshold, setNtpDriftThreshold] = useState(50);
-  const [ntpSyncStatus, setNtpSyncStatus] = useState<NTPSyncStatus>({
-    enabled: false,
-    lastSync: 0,
-    timeOffset: 0,
-    healthy: false,
-    syncCount: 0,
-    errorCount: 0
-  });
   const [activeTab, setActiveTab] = useState('clock');
   const [ipAddress, setIpAddress] = useState('');
   const [connectedClients, setConnectedClients] = useState<any[]>([]);
 
   const { toast } = useToast();
   const wsRef = useRef<WebSocket | null>(null);
-  const ntpManagerRef = useRef<NTPSyncManager | null>(null);
   
   const { addDebugLog, ...debugLogProps } = useDebugLog();
 
@@ -83,9 +67,7 @@ const CountdownClock = () => {
             type: 'sync-settings',
             url: window.location.href,
             timers: clockState.timers,
-            ntpSyncEnabled,
-            ntpSyncInterval,
-            ntpDriftThreshold
+            clockPrettyHeader: clockState.clockPrettyHeader
           }));
         };
 
@@ -100,14 +82,6 @@ const CountdownClock = () => {
                 ...data
               }));
 
-              if (data.ntpTimestamp) {
-                addDebugLog('NTP', 'Timestamp received via WebSocket', {
-                  ntpTimestamp: data.ntpTimestamp,
-                  serverTime: data.serverTime,
-                  localTime: Date.now() + clockState.ntpOffset,
-                  timeDiff: data.ntpTimestamp - (Date.now() + clockState.ntpOffset)
-                });
-              }
             } else if (data.type === 'clients') {
               setConnectedClients(data.clients || []);
               addDebugLog('WEBSOCKET', 'Connected clients updated', { count: data.clients?.length || 0 });
@@ -153,58 +127,13 @@ const CountdownClock = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (ntpSyncEnabled) {
-      const config = {
-        ...DEFAULT_NTP_CONFIG,
-        syncInterval: ntpSyncInterval,
-        driftThreshold: ntpDriftThreshold
-      };
-      
-      ntpManagerRef.current = new NTPSyncManager(config);
-      ntpManagerRef.current.setCallbacks(
-        (data) => {
-          setNtpSyncStatus(prev => ({
-            ...prev,
-            lastSync: data.timestamp,
-            timeOffset: data.offset,
-            healthy: true,
-            syncCount: prev.syncCount + 1
-          }));
-          addDebugLog('NTP', 'Time synchronized', {
-            server: data.server,
-            offset: data.offset,
-            timestamp: data.timestamp
-          });
-        },
-        (error) => {
-          setNtpSyncStatus(prev => ({
-            ...prev,
-            healthy: false,
-            errorCount: prev.errorCount + 1
-          }));
-          addDebugLog('NTP', 'Sync error', { error });
-        }
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({ type: 'sync-settings', clockPrettyHeader: clockState.clockPrettyHeader })
       );
-      
-      ntpManagerRef.current.startSync();
-      setNtpSyncStatus(prev => ({ ...prev, enabled: true }));
-      
-      return () => {
-        if (ntpManagerRef.current) {
-          ntpManagerRef.current.stopSync();
-          ntpManagerRef.current = null;
-        }
-        setNtpSyncStatus(prev => ({ ...prev, enabled: false }));
-      };
-    } else {
-      if (ntpManagerRef.current) {
-        ntpManagerRef.current.stopSync();
-        ntpManagerRef.current = null;
-      }
-      setNtpSyncStatus(prev => ({ ...prev, enabled: false }));
     }
-  }, [ntpSyncEnabled, ntpSyncInterval, ntpDriftThreshold]);
+  }, [clockState.clockPrettyHeader]);
+
 
   const handleExternalCommand = (command: any) => {
     addDebugLog('API', 'External command received', command);
@@ -327,29 +256,6 @@ const CountdownClock = () => {
     }
   };
 
-  const applyNtpSettings = async () => {
-    addDebugLog('UI', 'NTP settings applied', { 
-      ntpSyncEnabled,
-      ntpSyncInterval,
-      ntpDriftThreshold
-    });
-    
-    try {
-      await fetch('/api/set-ntp-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          enabled: ntpSyncEnabled, 
-          interval: ntpSyncInterval,
-          driftThreshold: ntpDriftThreshold
-        })
-      });
-    } catch (error) {
-      addDebugLog('UI', 'Failed to sync NTP settings with server', { error: error.message });
-    }
-    
-    toast({ title: "NTP Settings Applied" });
-  };
 
   const changeServerPort = async (port: number) => {
     try {
@@ -397,7 +303,6 @@ const CountdownClock = () => {
           <ClockDisplay
             clockState={clockState}
             ipAddress={ipAddress}
-            ntpSyncStatus={ntpSyncStatus}
             onTogglePlayPause={() => pauseTimer(clockState.activeTimerId || 1)}
             onResetTime={() => resetTimer(clockState.activeTimerId || 1)}
             onAdjustTimeBySeconds={(id, seconds) => adjustTimeBySeconds(id, seconds)}
@@ -414,17 +319,11 @@ const CountdownClock = () => {
           <div className="p-6">
             <SettingsTab
               clockState={clockState}
-              ntpSyncEnabled={ntpSyncEnabled}
-              ntpSyncInterval={ntpSyncInterval}
-              ntpDriftThreshold={ntpDriftThreshold}
-              setNtpSyncEnabled={setNtpSyncEnabled}
-              setNtpSyncInterval={setNtpSyncInterval}
-              setNtpDriftThreshold={setNtpDriftThreshold}
               onSetTimerTime={setTimerTime}
               onSetTimerName={setTimerName}
-              onApplyNtpSettings={applyNtpSettings}
               serverPort={clockState.port || 8080}
               onSetServerPort={changeServerPort}
+              onSetHeader={(text) => setClockState(prev => ({ ...prev, clockPrettyHeader: text }))}
             />
           </div>
         </TabsContent>
@@ -444,7 +343,6 @@ const CountdownClock = () => {
               {...debugLogProps}
               onClearDebugLog={debugLogProps.clearDebugLog}
               connectedClients={connectedClients}
-              ntpSyncStatus={ntpSyncStatus}
             />
           </div>
         </TabsContent>

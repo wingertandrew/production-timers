@@ -2,38 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Clock, Plus, Minus, Wifi, Server, Timer } from 'lucide-react';
+import { Clock, Plus, Minus, Server, Timer } from 'lucide-react';
 import { ClockState } from '@/types/clock';
 
 interface SettingsTabProps {
   clockState: ClockState;
-  ntpSyncEnabled: boolean;
-  ntpSyncInterval: number;
-  ntpDriftThreshold: number;
-  setNtpSyncEnabled: (enabled: boolean) => void;
-  setNtpSyncInterval: (interval: number) => void;
-  setNtpDriftThreshold: (threshold: number) => void;
   onSetTimerTime: (timerId: number, minutes: number, seconds: number) => void;
   onSetTimerName: (timerId: number, name: string) => void;
-  onApplyNtpSettings: () => void;
   serverPort: number;
   onSetServerPort: (port: number) => void;
+  onSetHeader: (text: string) => void;
 }
 
 const SettingsTab: React.FC<SettingsTabProps> = ({
   clockState,
-  ntpSyncEnabled,
-  ntpSyncInterval,
-  ntpDriftThreshold,
-  setNtpSyncEnabled,
-  setNtpSyncInterval,
-  setNtpDriftThreshold,
   onSetTimerTime,
   onSetTimerName,
-  onApplyNtpSettings,
   serverPort,
-  onSetServerPort
+  onSetServerPort,
+  onSetHeader
 }) => {
   const [nameValues, setNameValues] = useState<Record<number, string>>(() => {
     const vals: Record<number, string> = {};
@@ -45,6 +32,19 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const [headerText, setHeaderText] = useState(clockState.clockPrettyHeader || 'TIMER OVERVIEW');
   const [portValue, setPortValue] = useState<number>(serverPort);
+  const nameValuesRef = React.useRef(nameValues);
+
+  useEffect(() => {
+    nameValuesRef.current = nameValues;
+  }, [nameValues]);
+
+  useEffect(() => {
+    return () => {
+      Object.entries(nameValuesRef.current).forEach(([id, name]) => {
+        onSetTimerName(Number(id), name);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     setNameValues(prev => {
@@ -72,8 +72,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const handleHeaderTextChange = (value: string) => {
     setHeaderText(value);
-    // Auto-save header text - you'd need to implement this in the parent component
-    // For now, just update local state
+    onSetHeader(value);
   };
 
   return (
@@ -233,121 +232,6 @@ const SettingsTab: React.FC<SettingsTabProps> = ({
             </CardContent>
           </Card>
 
-          {/* NTP Sync Settings */}
-          <Card className="bg-gray-700 border-gray-500">
-            <CardHeader>
-              <CardTitle className="text-2xl text-white flex items-center gap-3">
-                <Server className="w-8 h-8" />
-                Network Time Synchronization
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <h3 className="text-xl text-white font-semibold">Enable NTP Time Sync</h3>
-                  <p className="text-gray-300 text-lg">
-                    Keep all remote clocks perfectly synchronized using Network Time Protocol
-                  </p>
-                </div>
-                <Switch
-                  checked={ntpSyncEnabled}
-                  onCheckedChange={setNtpSyncEnabled}
-                  className="scale-150"
-                />
-              </div>
-              
-              <div className={`space-y-6 ${!ntpSyncEnabled ? 'opacity-50' : ''}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex flex-col items-center space-y-4">
-                    <label className="block text-xl font-medium text-white">
-                      Sync Interval (hours)
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="24"
-                      value={ntpSyncInterval / 3600000}
-                      onChange={(e) => setNtpSyncInterval((parseInt(e.target.value) || 6) * 3600000)}
-                      disabled={!ntpSyncEnabled}
-                      className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl max-w-xs disabled:opacity-50"
-                    />
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => setNtpSyncInterval(Math.max(3600000, ntpSyncInterval - 3600000))}
-                        size="sm"
-                        disabled={!ntpSyncEnabled}
-                        className="h-12 w-12 bg-gray-400 hover:bg-gray-300 text-black rounded-lg disabled:opacity-50"
-                      >
-                        <Minus className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        onClick={() => setNtpSyncInterval(Math.min(86400000, ntpSyncInterval + 3600000))}
-                        size="sm"
-                        disabled={!ntpSyncEnabled}
-                        className="h-12 w-12 bg-gray-400 hover:bg-gray-300 text-black rounded-lg disabled:opacity-50"
-                      >
-                        <Plus className="w-5 h-5" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center space-y-4">
-                    <label className="block text-xl font-medium text-white">
-                      Drift Threshold (ms)
-                    </label>
-                    <Input
-                      type="number"
-                      min="10"
-                      max="1000"
-                      value={ntpDriftThreshold}
-                      onChange={(e) => setNtpDriftThreshold(parseInt(e.target.value) || 50)}
-                      disabled={!ntpSyncEnabled}
-                      className="h-16 bg-gray-700 border-gray-500 text-center text-white text-2xl font-bold rounded-xl max-w-xs disabled:opacity-50"
-                    />
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => setNtpDriftThreshold(Math.max(10, ntpDriftThreshold - 10))}
-                        size="sm"
-                        disabled={!ntpSyncEnabled}
-                        className="h-12 w-12 bg-gray-400 hover:bg-gray-300 text-black rounded-lg disabled:opacity-50"
-                      >
-                        <Minus className="w-5 h-5" />
-                      </Button>
-                      <Button
-                        onClick={() => setNtpDriftThreshold(Math.min(1000, ntpDriftThreshold + 10))}
-                        size="sm"
-                        disabled={!ntpSyncEnabled}
-                        className="h-12 w-12 bg-gray-400 hover:bg-gray-300 text-black rounded-lg disabled:opacity-50"
-                      >
-                        <Plus className="w-5 h-5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Wifi className="w-6 h-6 text-blue-400" />
-                    <h4 className="text-lg font-semibold text-blue-400">Sync Configuration</h4>
-                  </div>
-                  <div className="text-sm text-gray-300 space-y-1">
-                    <p>• Uses multiple NTP servers for redundancy</p>
-                    <p>• Applies smooth time corrections to avoid jumps</p>
-                    <p>• Maintains sync status monitoring and health checks</p>
-                    <p>• Fallback to local time if all servers fail</p>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                onClick={onApplyNtpSettings}
-                size="lg"
-                className="w-full h-16 text-2xl bg-gray-400 hover:bg-gray-300 text-black rounded-xl"
-              >
-                Apply NTP Settings
-              </Button>
-            </CardContent>
-          </Card>
         </CardContent>
       </Card>
     </div>

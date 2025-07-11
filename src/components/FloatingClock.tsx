@@ -16,7 +16,6 @@ interface SingleTimer {
 interface ClockData {
   timers: SingleTimer[];
   activeTimerId: number | null;
-  ntpOffset?: number;
 }
 
 const FloatingClock: React.FC = () => {
@@ -33,8 +32,7 @@ const FloatingClock: React.FC = () => {
       initialTime: { minutes: 5, seconds: 0 },
       name: `Timer ${i + 1}`
     })),
-    activeTimerId: 1,
-    ntpOffset: 0
+    activeTimerId: 1
   });
 
   useEffect(() => {

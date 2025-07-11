@@ -2,8 +2,6 @@
 import express from 'express';
 import http from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
-import dgram from 'dgram';
-import https from 'https';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
@@ -41,16 +39,12 @@ const createInitialTimer = (id) => ({
 let serverClockState = {
   timers: Array.from({ length: 5 }, (_, i) => createInitialTimer(i + 1)),
   activeTimerId: 1,
-  ntpTimestamp: null,
-  ntpSyncEnabled: false,
-  ntpOffset: 0,
-  ntpSyncInterval: Number(process.env.NTP_SYNC_INTERVAL) || 1800000,
-  ntpDriftThreshold: Number(process.env.NTP_DRIFT_THRESHOLD) || 50,
-  port: Number(process.env.PORT) || 8080
+  port: Number(process.env.PORT) || 8080,
+  clockPrettyHeader: 'TIMER OVERVIEW'
 };
 
 let serverTimers = {};
-let ntpSyncTimer = null;
+
 let currentPort = serverClockState.port;
 
 // Track connected WebSocket clients
@@ -76,70 +70,10 @@ function broadcastClients() {
   broadcast({ type: 'clients', clients });
 }
 
-function queryNtpTime(server) {
-  return new Promise((resolve, reject) => {
-    const client = dgram.createSocket('udp4');
-    const packet = Buffer.alloc(48);
-    packet[0] = 0x1b; // NTP client request
-
-    const timeout = setTimeout(() => {
-      client.close();
-      reject(new Error('NTP request timed out'));
-    }, 10000);
-
-    client.once('error', err => {
-      clearTimeout(timeout);
-      client.close();
-      reject(err);
-    });
-
-    client.once('message', msg => {
-      clearTimeout(timeout);
-      client.close();
-      const seconds = msg.readUInt32BE(40) - 2208988800;
-      resolve(seconds * 1000);
-    });
-
-    client.send(packet, 0, packet.length, 123, server, err => {
-      if (err) {
-        clearTimeout(timeout);
-        client.close();
-        reject(err);
-      }
-    });
-  });
-}
-
-function queryWorldTime() {
-  const url = 'https://worldtimeapi.org/api/ip';
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, res => {
-        let data = '';
-        res.on('data', chunk => {
-          data += chunk;
-        });
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            resolve(new Date(json.utc_datetime).getTime());
-          } catch (err) {
-            reject(err);
-          }
-        });
-      })
-      .on('error', reject);
-  });
-}
-
 function broadcast(data) {
   const message = JSON.stringify({
     ...data,
-    ntpTimestamp: serverClockState.ntpSyncEnabled
-      ? Date.now() + serverClockState.ntpOffset
-      : null,
-    serverTime: Date.now() + serverClockState.ntpOffset,
-    ntpOffset: serverClockState.ntpOffset
+    serverTime: Date.now()
   });
   console.log('Broadcasting to', wss.clients.size, 'clients:', data.type || data.action);
   wss.clients.forEach(client => {
@@ -149,43 +83,7 @@ function broadcast(data) {
   });
 }
 
-async function performNtpSync() {
-  const ntpServer = process.env.NTP_SERVER || 'time.google.com';
-  try {
-    const before = Date.now();
-    let serverTime;
-    try {
-      serverTime = await queryNtpTime(ntpServer);
-    } catch (err) {
-      console.error('NTP sync failed:', err);
-      serverTime = await queryWorldTime();
-    }
-    const after = Date.now();
-    const networkDelay = (after - before) / 2;
-    const clientTime = before + networkDelay;
-    const offset = serverTime - clientTime;
-    serverClockState.ntpOffset = offset;
-    broadcast({ type: 'status', ...serverClockState });
-  } catch (err) {
-    console.error('Scheduled time sync failed:', err);
-  }
-}
 
-function startNtpSync() {
-  if (ntpSyncTimer) {
-    clearInterval(ntpSyncTimer);
-  }
-  if (!serverClockState.ntpSyncEnabled) return;
-  performNtpSync();
-  ntpSyncTimer = setInterval(performNtpSync, serverClockState.ntpSyncInterval);
-}
-
-function stopNtpSync() {
-  if (ntpSyncTimer) {
-    clearInterval(ntpSyncTimer);
-    ntpSyncTimer = null;
-  }
-}
 
 function startServer(port) {
   return new Promise(resolve => {
@@ -220,7 +118,7 @@ function startServerTimer(timerId) {
     // Update pause duration if paused
     if (timer.isPaused && timer.pauseStartTime) {
       const pauseDuration = Math.floor(
-        (Date.now() + serverClockState.ntpOffset - timer.pauseStartTime) / 1000
+        (Date.now() - timer.pauseStartTime) / 1000
       );
       timer.currentPauseDuration = pauseDuration;
       broadcast({
@@ -243,7 +141,7 @@ function updateServerTimer(timerId) {
   const timer = serverClockState.timers.find(t => t.id === timerId);
   if (!timer) return;
   
-  const now = Date.now() + serverClockState.ntpOffset;
+  const now = Date.now();
   const elapsed = now - timer.lastUpdateTime;
   if (elapsed < 1000) return;
   
@@ -287,7 +185,7 @@ function handleWsConnection(ws) {
     ip: normalizeIp(ws._socket.remoteAddress),
     url: '',
     hostname: '',
-    connectedAt: Date.now() + serverClockState.ntpOffset
+    connectedAt: Date.now()
   };
 
   connectedClients.set(ws, clientInfo);
@@ -310,26 +208,10 @@ function handleWsConnection(ws) {
         if (data.timers && Array.isArray(data.timers)) {
           serverClockState.timers = data.timers;
         }
-        if (typeof data.ntpSyncEnabled === 'boolean') {
-          serverClockState.ntpSyncEnabled = data.ntpSyncEnabled;
-          if (serverClockState.ntpSyncEnabled) {
-            startNtpSync();
-          } else {
-            stopNtpSync();
-          }
+        if (typeof data.clockPrettyHeader === 'string') {
+          serverClockState.clockPrettyHeader = data.clockPrettyHeader;
         }
-        if (typeof data.ntpSyncInterval === 'number') {
-          serverClockState.ntpSyncInterval = data.ntpSyncInterval;
-        }
-        if (typeof data.ntpDriftThreshold === 'number') {
-          serverClockState.ntpDriftThreshold = data.ntpDriftThreshold;
-        }
-        if (
-          typeof data.ntpSyncInterval === 'number' ||
-          typeof data.ntpDriftThreshold === 'number'
-        ) {
-          startNtpSync();
-        }
+        // ignore NTP settings
         if (data.url) {
           const info = connectedClients.get(ws);
           if (info) {
@@ -380,7 +262,7 @@ app.post('/api/timer/:id/start', (req, res) => {
   timer.isPaused = false;
   timer.pauseStartTime = null;
   timer.currentPauseDuration = 0;
-  timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+  timer.lastUpdateTime = Date.now();
   
   startServerTimer(timerId);
   broadcast({ action: 'start', timerId });
@@ -404,11 +286,11 @@ app.post('/api/timer/:id/pause', (req, res) => {
     timer.isPaused = false;
     timer.pauseStartTime = null;
     timer.currentPauseDuration = 0;
-    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    timer.lastUpdateTime = Date.now();
   } else {
     // Pause
     timer.isPaused = true;
-    timer.pauseStartTime = Date.now() + serverClockState.ntpOffset;
+    timer.pauseStartTime = Date.now();
     timer.lastUpdateTime = timer.pauseStartTime;
   }
   broadcast({ action: 'pause', timerId });
@@ -433,7 +315,7 @@ app.post('/api/timer/:id/reset', (req, res) => {
   timer.elapsedSeconds = 0;
   timer.pauseStartTime = null;
   timer.currentPauseDuration = 0;
-  timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+  timer.lastUpdateTime = Date.now();
   
   stopServerTimer(timerId);
   broadcast({ action: 'reset', timerId });
@@ -467,7 +349,7 @@ app.post('/api/timer/:id/adjust-time', (req, res) => {
     } else {
       timer.startTime = { minutes: newMinutes, seconds: newSeconds };
     }
-    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    timer.lastUpdateTime = Date.now();
 
     broadcast({ action: 'adjust-time', timerId, minutes: newMinutes, seconds: newSeconds });
     broadcast({ type: 'status', ...serverClockState });
@@ -546,7 +428,7 @@ app.post('/api/reset', (req, res) => {
     timer.elapsedSeconds = 0;
     timer.pauseStartTime = null;
     timer.currentPauseDuration = 0;
-    timer.lastUpdateTime = Date.now() + serverClockState.ntpOffset;
+    timer.lastUpdateTime = Date.now();
     stopServerTimer(timer.id);
   });
   broadcast({ action: 'reset' });
@@ -554,25 +436,6 @@ app.post('/api/reset', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/set-ntp-sync', (req, res) => {
-  console.log('API: Set NTP sync settings');
-  const { enabled, interval, driftThreshold } = req.body;
-  if (typeof enabled === 'boolean') {
-    serverClockState.ntpSyncEnabled = enabled;
-  }
-  if (typeof interval === 'number') {
-    serverClockState.ntpSyncInterval = interval;
-  }
-  if (typeof driftThreshold === 'number') {
-    serverClockState.ntpDriftThreshold = driftThreshold;
-  }
-  if (serverClockState.ntpSyncEnabled) {
-    startNtpSync();
-  } else {
-    stopNtpSync();
-  }
-  res.json({ success: true });
-});
 
 app.post('/api/set-port', (req, res) => {
   const newPort = parseInt(req.body.port);
@@ -601,18 +464,6 @@ app.post('/api/set-port', (req, res) => {
 
 });
 
-app.get('/api/ntp-sync', async (req, res) => {
-  if (req.query.server) {
-    process.env.NTP_SERVER = String(req.query.server);
-  }
-  try {
-    await performNtpSync();
-    res.json({ offset: serverClockState.ntpOffset, lastSync: new Date().toISOString() });
-  } catch (err) {
-    console.error('Time sync failed:', err);
-    res.status(500).json({ error: 'Time sync failed' });
-  }
-});
 
 app.get('/api/status', (req, res) => {
   const { fields } = req.query;
@@ -632,8 +483,7 @@ app.get('/api/status', (req, res) => {
 
   res.json({
     ...serverClockState,
-    serverTime: Date.now() + serverClockState.ntpOffset,
-    ntpOffset: serverClockState.ntpOffset,
+    serverTime: Date.now(),
     api_version: "2.0.0",
     connection_protocol: "http_rest_websocket"
   });
@@ -680,10 +530,6 @@ app.get('/api/docs', (req, res) => {
         "POST /api/reset": "Reset all timers"
       },
       configuration: {
-        "POST /api/set-ntp-sync": {
-          description: "Configure NTP sync settings",
-          body: { enabled: "boolean", interval: "number (seconds)", driftThreshold: "number (milliseconds)" }
-        },
         "POST /api/set-port": {
           description: "Set HTTP server port",
           body: { port: "number" }
@@ -695,7 +541,6 @@ app.get('/api/docs', (req, res) => {
           response_fields: {
             timers: "Array of timer objects",
             activeTimerId: "Currently selected timer ID",
-            ntpSyncEnabled: "NTP sync status",
             serverTime: "Server timestamp",
             api_version: "API version"
           }
@@ -725,7 +570,4 @@ app.get('*', (_req, res) => {
 startServer(serverClockState.port).then(() => {
   console.log('Multi-timer server initialized with 5 discrete timers');
   broadcastClients();
-  if (serverClockState.ntpSyncEnabled) {
-    startNtpSync();
-  }
 });

@@ -16,7 +16,6 @@ interface SingleTimer {
 interface ClockData {
   timers: SingleTimer[];
   activeTimerId: number | null;
-  ntpOffset?: number;
   clockPrettyHeader?: string;
 }
 
@@ -35,7 +34,6 @@ const ClockPretty = () => {
       name: `Timer ${i + 1}`
     })),
     activeTimerId: 1,
-    ntpOffset: 0,
     clockPrettyHeader: 'TIMER OVERVIEW'
   });
 
@@ -194,9 +192,7 @@ const ClockPretty = () => {
             <h1 className="text-6xl font-bold text-white mb-4">
               {clockData.clockPrettyHeader || 'TIMER OVERVIEW'}
             </h1>
-            <div className="text-2xl text-gray-400">
-              Active Timer: {clockData.activeTimerId}
-            </div>
+            {/* Active timer label removed */}
           </div>
 
           {/* All Timers - Horizontal Lines */}

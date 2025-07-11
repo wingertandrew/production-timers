@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Pause, RotateCcw, Wifi, WifiOff, Edit2 } from 'lucide-react';
-import { ClockState, NTPSyncStatus } from '@/types/clock';
+import { Play, Pause, RotateCcw, Edit2 } from 'lucide-react';
+import { ClockState } from '@/types/clock';
 import { formatTime, formatDuration } from '@/utils/clockUtils';
 
 interface ClockDisplayProps {
   clockState: ClockState;
   ipAddress: string;
-  ntpSyncStatus: NTPSyncStatus;
   onTogglePlayPause: () => void;
   onResetTime: () => void;
   onAdjustTimeBySeconds: (timerId: number, seconds: number) => void;
@@ -23,7 +22,6 @@ interface ClockDisplayProps {
 const ClockDisplay: React.FC<ClockDisplayProps> = ({
   clockState,
   ipAddress,
-  ntpSyncStatus,
   onTogglePlayPause,
   onResetTime,
   onAdjustTimeBySeconds,
@@ -108,23 +106,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
             <span>{ipAddress}</span>
           </div>
           
-          {ntpSyncStatus.enabled && (
-            <div className="flex items-center gap-2 text-xl">
-              {ntpSyncStatus.healthy ? (
-                <Wifi className="w-6 h-6 text-green-400" />
-              ) : (
-                <WifiOff className="w-6 h-6 text-red-400" />
-              )}
-              <span className={ntpSyncStatus.healthy ? 'text-green-400' : 'text-red-400'}>
-                NTP {ntpSyncStatus.healthy ? 'SYNC' : 'FAIL'}
-              </span>
-              {ntpSyncStatus.timeOffset !== 0 && (
-                <span className="text-yellow-400 text-lg">
-                  {ntpSyncStatus.timeOffset > 0 ? '+' : ''}{ntpSyncStatus.timeOffset}ms
-                </span>
-              )}
-            </div>
-          )}
+          {/* NTP status removed */}
         </div>
 
         {/* All Timers Stack */}
@@ -341,11 +323,6 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
         <div className="flex justify-between items-center text-white text-xl h-8">
           <div className="flex gap-8">
             <div>Active: {clockState.timers.find(t => t.id === clockState.activeTimerId)?.name || `Timer ${clockState.activeTimerId}`}</div>
-            {ntpSyncStatus.enabled && ntpSyncStatus.syncCount > 0 && (
-              <div className="text-blue-400">
-                NTP Syncs: {ntpSyncStatus.syncCount} | Errors: {ntpSyncStatus.errorCount}
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -14,7 +14,6 @@ const InfoTab: React.FC = () => (
             <li><strong>Server-Side Clock</strong> – The timer is maintained on the server. All connected clients display the same countdown.</li>
             <li><strong>Rounds</strong> – You can configure one or more rounds. Each round uses the same starting time.</li>
             <li><strong>Between Rounds</strong> – Optional countdown that runs between rounds. When enabled, a short timer counts up between rounds before the next round begins.</li>
-            <li><strong>NTP Synchronization</strong> – If enabled, the server periodically syncs with an NTP time source for accurate timing.</li>
           </ul>
         </section>
         <section>
@@ -52,10 +51,6 @@ const InfoTab: React.FC = () => (
             <li>Officials may cancel the between-rounds period early by starting the next round manually.</li>
           </ol>
           <p className="mt-2">During the between-rounds state, the main countdown controls are disabled to prevent accidental changes.</p>
-        </section>
-        <section>
-          <h3 className="text-2xl text-white font-bold mb-2">NTP Time Sync</h3>
-          <p>For precise timing over long events, the server can sync with Network Time Protocol (NTP) servers. When enabled, the server periodically checks the reference time and applies a small offset to keep the clock accurate. The current offset and sync health are visible in the debug tab.</p>
         </section>
         <section>
           <h3 className="text-2xl text-white font-bold mb-2">Display Pages</h3>

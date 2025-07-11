@@ -40,14 +40,11 @@ Complete REST API for external timer control with discrete timer support:
 
 #### System Operations
 - `GET /api/status` - Get current state of all timers
-- `POST /api/set-ntp-sync` - Configure NTP synchronization
 - `POST /api/set-port` - Change server port
 - `GET /api/docs` - Complete API documentation
 
 ### Time Synchronization
-- **NTP Sync**: Optional network time synchronization
-- **Drift Correction**: Automatic time drift detection and correction
-- **Sync Status**: Real-time NTP health monitoring
+Clock synchronization via NTP has been removed in this version.
 
 ### Technical Features
 - **WebSocket Communication**: Real-time updates between server and clients
@@ -60,7 +57,7 @@ Complete REST API for external timer control with discrete timer support:
 ### Web Interface
 1. **Display Tab**: Main timer display showing all 5 timers vertically stacked
 2. **Timers Tab**: Individual timer cards with controls
-3. **Settings Tab**: Configure individual timer durations, NTP settings, and server port
+3. **Settings Tab**: Configure individual timer durations and server port
 4. **API Info Tab**: API endpoint documentation and examples
 5. **Debug Tab**: System logs and connection status
 
@@ -200,8 +197,6 @@ Each of the 5 timers maintains:
     }
   ],
   "activeTimerId": 1,
-  "ntpSyncEnabled": false,
-  "ntpOffset": 0,
   "serverTime": 1641234567890,
   "api_version": "2.0.0"
 }
@@ -227,4 +222,3 @@ Each of the 5 timers maintains:
 - **Individual Timer Configuration**: Set unique durations for each of the 5 timers
 - **Real-time Preview**: See current timer status while configuring
 - **Batch Operations**: Apply settings to multiple timers
-- **NTP Synchronization**: Configure network time sync settings

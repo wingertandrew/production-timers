@@ -12,7 +12,6 @@ interface SingleTimer {
 interface ClockData {
   timers: SingleTimer[];
   activeTimerId: number | null;
-  ntpOffset?: number;
 }
 
 const ClockArena = () => {
@@ -24,8 +23,7 @@ const ClockArena = () => {
       isRunning: false,
       isPaused: false
     })),
-    activeTimerId: 1,
-    ntpOffset: 0
+    activeTimerId: 1
   });
 
   useEffect(() => {
