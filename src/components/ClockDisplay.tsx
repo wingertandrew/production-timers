@@ -66,6 +66,13 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
     return 'bg-green-600';
   };
 
+  const getProgressPercentage = (timer: any) => {
+    const remainingSeconds = timer.minutes * 60 + timer.seconds;
+    const elapsedSeconds = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
+    const totalTime = remainingSeconds + elapsedSeconds;
+    return totalTime > 0 ? Math.min((elapsedSeconds / totalTime) * 100, 100) : 0;
+  };
+
   const startEdit = (timer: any) => {
     setEditingTimer(timer.id);
     setEditMinutes(timer.initialTime.minutes);
@@ -126,23 +133,7 @@ const ClockDisplay: React.FC<ClockDisplayProps> = ({
             const displayTime = formatTime(timer.minutes, timer.seconds);
             const elapsedTime = formatTime(timer.elapsedMinutes, timer.elapsedSeconds);
 
-            const remainingSeconds = timer.minutes * 60 + timer.seconds;
-            const elapsedSecs = timer.elapsedMinutes * 60 + timer.elapsedSeconds;
-let progress = 0;
-
-if (!timer.isRunning && remainingSeconds > 0) {
-  const totalTime = remainingSeconds + elapsedSecs;
-  if (totalTime > 0) {
-    progress = Math.min((elapsedSecs / totalTime) * 100, 100);
-  }
-} else if (timer.initialTime) {
-  const totalInitialSeconds =
-    timer.initialTime.minutes * 60 + timer.initialTime.seconds;
-  if (totalInitialSeconds > 0) {
-    const progressSeconds = totalInitialSeconds - remainingSeconds;
-    progress = Math.min((progressSeconds / totalInitialSeconds) * 100, 100);
-  }
-}
+            const progress = getProgressPercentage(timer);
 
             const isActive = timer.id === clockState.activeTimerId;
             const isEditing = editingTimer === timer.id;
@@ -277,7 +268,7 @@ if (!timer.isRunning && remainingSeconds > 0) {
                     </div>
                   </div>
 
-                  {/* Progress Bar with dynamic countdown animation */}
+                  {/* Progress Bar with unified progress calculation */}
                   <div className="mt-4">
                     <div className="w-full h-4 bg-gray-700 rounded overflow-hidden">
                       <div
